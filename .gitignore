@@ -1,0 +1,9 @@
+node_modules/
+.env
+target/
+dist/
+.next/
+out/
+circuits/target/
+circuits/*/target/
+circuits/*/proofs/

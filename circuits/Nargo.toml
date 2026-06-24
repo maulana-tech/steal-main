@@ -1,0 +1,8 @@
+[workspace]
+members = [
+  "common",
+  "open_position",
+  "liquidate",
+  "repay_withdraw",
+  "solvency",
+]

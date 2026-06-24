@@ -1,0 +1,7 @@
+[package]
+name = "repay_withdraw"
+type = "bin"
+authors = ["Eclipse"]
+
+[dependencies]
+common = { path = "../common" }
