@@ -1,52 +1,83 @@
 "use client";
 
 interface Props {
-  healthFactor: number; // e.g. 1.5
+  healthFactor: number;
 }
 
-/**
- * Visual health factor meter — shows how close a position is to liquidation.
- * HF < 1 = liquidatable (red), HF 1–1.5 = warning (yellow), HF > 1.5 = safe (green).
- */
 export default function HealthFactorMeter({ healthFactor }: Props) {
-  const capped = Math.min(healthFactor, 3); // cap at 3x for display
+  const capped = Math.min(healthFactor, 3);
   const pct = (capped / 3) * 100;
 
-  const color =
+  const { color, glow, label } =
     healthFactor < 1
-      ? { bar: "bg-red-500", text: "text-red-400", label: "LIQUIDATABLE" }
+      ? { color: "var(--red)", glow: "var(--red-glow)", label: "Liquidatable" }
       : healthFactor < 1.5
-      ? { bar: "bg-amber-400", text: "text-amber-400", label: "At Risk" }
-      : { bar: "bg-green-500", text: "text-green-400", label: "Healthy" };
+      ? { color: "var(--amber)", glow: "var(--amber-glow)", label: "At Risk" }
+      : { color: "var(--green)", glow: "var(--emerald-glow)", label: "Healthy" };
 
   return (
-    <div className="rounded-xl border border-eclipse-border bg-eclipse-surface p-5">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-sm font-semibold text-eclipse-muted uppercase tracking-wider">
-          Health Factor
-        </h3>
-        <div className="flex items-center gap-2">
-          <span className={`text-xl font-bold font-mono ${color.text}`}>
+    <div className="card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <span className="label">Health Factor</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              fontFamily: "var(--font-mono)",
+              color,
+            }}
+          >
             {isFinite(healthFactor) ? healthFactor.toFixed(2) : "∞"}
           </span>
-          <span className={`text-xs px-2 py-0.5 rounded ${color.text} bg-current/10`}>
-            {color.label}
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "3px 8px",
+              borderRadius: 4,
+              background: glow,
+              color,
+              border: `1px solid ${color}44`,
+            }}
+          >
+            {label}
           </span>
         </div>
       </div>
 
-      {/* Bar */}
-      <div className="h-3 rounded-full bg-eclipse-border overflow-hidden">
+      {/* Track */}
+      <div
+        style={{
+          height: 6,
+          borderRadius: 3,
+          background: "rgba(255,255,255,0.06)",
+          overflow: "hidden",
+        }}
+      >
         <div
-          className={`h-full rounded-full transition-all duration-500 ${color.bar}`}
-          style={{ width: `${pct}%` }}
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            borderRadius: 3,
+            background: color,
+            boxShadow: `0 0 8px ${glow}`,
+            transition: "width 0.4s ease, background 0.3s",
+          }}
         />
       </div>
 
-      {/* Scale labels */}
-      <div className="flex justify-between text-xs text-eclipse-muted mt-1">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: 6,
+          fontSize: 11,
+          color: "var(--muted)",
+        }}
+      >
         <span>0</span>
-        <span className="text-red-400">1.0 (liq.)</span>
+        <span style={{ color: "var(--red)" }}>1.0 liq.</span>
         <span>3+</span>
       </div>
     </div>
