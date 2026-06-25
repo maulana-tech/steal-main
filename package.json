@@ -6,8 +6,8 @@
     "build:circuits": "bash scripts/build-circuits.sh && node scripts/gen-vk.mjs",
     "build:contracts": "bash scripts/build-contracts.sh",
     "deploy": "bash scripts/deploy.sh",
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build"
+    "dev": "pnpm --filter eclipse-web dev",
+    "build": "pnpm --filter eclipse-web build"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
