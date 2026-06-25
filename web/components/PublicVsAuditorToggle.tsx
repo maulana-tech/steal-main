@@ -3,100 +3,115 @@
 import { useState } from "react";
 
 interface PositionData {
-  // Public (always shown)
   collateralCommitment: string;
   debtCommitment: string;
   creditAttestation: string;
   nullifier: string;
-  // Private (only shown in auditor view)
   collateral?: number;
   debt?: number;
   creditScore?: number;
   healthFactor?: number;
 }
 
-interface Props {
-  position: PositionData;
-}
-
-/**
- * Toggle between what the public sees (commitments only) vs
- * what an auditor sees (decrypted via view key).
- * Used to dramatically demonstrate the privacy contrast during the demo.
- */
-export default function PublicVsAuditorToggle({ position }: Props) {
-  const [showAuditor, setShowAuditor] = useState(false);
-  const hasAuditorData = position.collateral !== undefined;
+export default function PublicVsAuditorToggle({ position }: { position: PositionData }) {
+  const [mode, setMode] = useState<"public" | "auditor">("public");
+  const hasAuditor = position.collateral !== undefined;
 
   return (
-    <div className="rounded-xl border border-eclipse-border bg-eclipse-surface overflow-hidden">
-      {/* Tab bar */}
-      <div className="flex border-b border-eclipse-border">
-        <button
-          onClick={() => setShowAuditor(false)}
-          className={`flex-1 py-2 text-sm font-medium transition-colors ${
-            !showAuditor
-              ? "bg-eclipse-bg text-eclipse-text border-b-2 border-violet-500"
-              : "text-eclipse-muted hover:text-eclipse-text"
-          }`}
-        >
-          🌐 Public View
-        </button>
-        <button
-          onClick={() => setShowAuditor(true)}
-          disabled={!hasAuditorData}
-          className={`flex-1 py-2 text-sm font-medium transition-colors disabled:opacity-40 ${
-            showAuditor
-              ? "bg-eclipse-bg text-eclipse-text border-b-2 border-emerald-500"
-              : "text-eclipse-muted hover:text-eclipse-text"
-          }`}
-        >
-          🔍 Auditor View
-        </button>
+    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      {/* Tabs */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        {(["public", "auditor"] as const).map((tab) => {
+          const active = mode === tab;
+          const disabled = tab === "auditor" && !hasAuditor;
+          return (
+            <button
+              key={tab}
+              onClick={() => !disabled && setMode(tab)}
+              disabled={disabled}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                background: "none",
+                border: "none",
+                borderBottom: active
+                  ? `2px solid ${tab === "public" ? "var(--accent)" : "var(--emerald)"}`
+                  : "2px solid transparent",
+                fontSize: 13,
+                fontWeight: 600,
+                color: active ? "var(--foreground)" : "var(--muted)",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.4 : 1,
+                transition: "color 0.15s",
+              }}
+            >
+              {tab === "public" ? "🌐 Public View" : "🔍 Auditor View"}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="p-5 space-y-2 text-sm font-mono">
-        {!showAuditor ? (
-          <>
-            <Field label="Collateral" value={position.collateralCommitment} hidden />
-            <Field label="Debt" value={position.debtCommitment} hidden />
-            <Field label="Credit" value={position.creditAttestation} hidden />
-            <p className="text-xs text-violet-400 italic mt-2">
+      {/* Content */}
+      <div style={{ padding: "16px 20px" }}>
+        {mode === "public" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Row label="Collateral" value={position.collateralCommitment} hidden />
+            <Row label="Debt" value={position.debtCommitment} hidden />
+            <Row label="Credit" value={position.creditAttestation} hidden />
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "var(--accent)",
+                fontStyle: "italic",
+              }}
+            >
               Actual values are cryptographically hidden. Zero-knowledge.
-            </p>
-          </>
+            </div>
+          </div>
         ) : (
-          <>
-            <Field label="Collateral" value={`${position.collateral} XLM`} />
-            <Field label="Debt" value={`${position.debt} USDC`} />
-            <Field label="Credit Score" value={String(position.creditScore)} />
-            <Field label="Health Factor" value={(position.healthFactor ?? 0).toFixed(4)} />
-            <p className="text-xs text-emerald-400 italic mt-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Row label="Collateral" value={`${position.collateral} XLM`} />
+            <Row label="Debt" value={`${position.debt} USDC`} />
+            <Row label="Credit Score" value={String(position.creditScore)} />
+            <Row label="Health Factor" value={(position.healthFactor ?? 0).toFixed(4)} />
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "var(--emerald)",
+                fontStyle: "italic",
+              }}
+            >
               Decrypted via view key. Public is still blind.
-            </p>
-          </>
+            </div>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-function Field({
-  label,
-  value,
-  hidden = false,
-}: {
-  label: string;
-  value: string;
-  hidden?: boolean;
-}) {
+function Row({ label, value, hidden }: { label: string; value: string; hidden?: boolean }) {
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-eclipse-muted flex-shrink-0">{label}:</span>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center" }}>
+      <span style={{ fontSize: 12, color: "var(--muted)", flexShrink: 0 }}>{label}</span>
       <span
-        className={`truncate text-xs ${
-          hidden ? "text-eclipse-muted" : "text-eclipse-text font-semibold"
-        }`}
+        className={hidden ? "" : "mono"}
+        style={{
+          fontSize: 12,
+          color: hidden ? "var(--muted)" : "var(--foreground)",
+          fontWeight: hidden ? 400 : 600,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontFamily: "var(--font-mono)",
+        }}
       >
         {value}
       </span>
