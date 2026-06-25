@@ -18,8 +18,8 @@ import {
   scValToNative,
 } from "@stellar/stellar-sdk";
 
-import { NETWORK_CONFIG } from "./config.js";
-export { NETWORK_CONFIG } from "./config.js";
+import { NETWORK_CONFIG } from "./config";
+export { NETWORK_CONFIG } from "./config";
 
 // ── RPC client ───────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ export async function invokeContract(params: {
     throw new Error(`Transaction failed on-chain: ${sendResult.hash}`);
   }
 
-  return getResult.returnValue ? scValToNative(getResult.returnValue) : undefined;
+  return sendResult.hash;
 }
 
 // ── Oracle helpers ────────────────────────────────────────────────────────────
@@ -145,5 +145,125 @@ export async function openPosition(p: OpenPositionParams): Promise<string> {
   return txHash as string;
 }
 
+export interface LiquidateParams {
+  liquidator: Keypair;
+  nullifierHash: Buffer;
+  collateralAsset: string;
+  collateralAmount: bigint;
+  proofBytes: Buffer;
+  publicInputsBytes: Buffer;
+}
+
+export async function liquidate(p: LiquidateParams): Promise<string> {
+  const txHash = await invokeContract({
+    contractId: NETWORK_CONFIG.contracts.lendingPool,
+    method: "liquidate",
+    args: [
+      nativeToScVal(p.liquidator.publicKey(), { type: "address" }),
+      nativeToScVal(p.nullifierHash, { type: "bytes" }),
+      nativeToScVal(p.collateralAsset, { type: "address" }),
+      nativeToScVal(p.collateralAmount, { type: "i128" }),
+      // ProofBytes struct
+      xdr.ScVal.scvMap([
+        new xdr.ScMapEntry({
+          key: nativeToScVal("proof", { type: "symbol" }),
+          val: nativeToScVal(p.proofBytes, { type: "bytes" }),
+        }),
+        new xdr.ScMapEntry({
+          key: nativeToScVal("public_inputs", { type: "symbol" }),
+          val: nativeToScVal(p.publicInputsBytes, { type: "bytes" }),
+        }),
+      ]),
+    ],
+    source: p.liquidator,
+  });
+
+  return txHash as string;
+}
+
+export interface RepayWithdrawParams {
+  borrower: Keypair;
+  nullifierHash: Buffer;
+  collateralAsset: string;
+  newCollateralCommitment: Buffer;
+  newDebtCommitment: Buffer;
+  deltaCollateral: bigint;
+  deltaDebt: bigint;
+  proofBytes: Buffer;
+  publicInputsBytes: Buffer;
+}
+
+export async function repayWithdraw(p: RepayWithdrawParams): Promise<string> {
+  const txHash = await invokeContract({
+    contractId: NETWORK_CONFIG.contracts.lendingPool,
+    method: "repay_withdraw",
+    args: [
+      nativeToScVal(p.borrower.publicKey(), { type: "address" }),
+      nativeToScVal(p.nullifierHash, { type: "bytes" }),
+      nativeToScVal(p.collateralAsset, { type: "address" }),
+      nativeToScVal(p.newCollateralCommitment, { type: "bytes" }),
+      nativeToScVal(p.newDebtCommitment, { type: "bytes" }),
+      nativeToScVal(p.deltaCollateral, { type: "i128" }),
+      nativeToScVal(p.deltaDebt, { type: "i128" }),
+      // ProofBytes struct
+      xdr.ScVal.scvMap([
+        new xdr.ScMapEntry({
+          key: nativeToScVal("proof", { type: "symbol" }),
+          val: nativeToScVal(p.proofBytes, { type: "bytes" }),
+        }),
+        new xdr.ScMapEntry({
+          key: nativeToScVal("public_inputs", { type: "symbol" }),
+          val: nativeToScVal(p.publicInputsBytes, { type: "bytes" }),
+        }),
+      ]),
+    ],
+    source: p.borrower,
+  });
+
+  return txHash as string;
+}
+
+export interface Position {
+  collateralCommitment: Buffer;
+  debtCommitment: Buffer;
+  creditAttestation: Buffer;
+  nullifier: Buffer;
+  openedAt: number;
+  isActive: boolean;
+}
+
+export async function getPosition(nullifierHash: Buffer): Promise<Position | null> {
+  const server = getRpcServer();
+  const contract = new Contract(NETWORK_CONFIG.contracts.lendingPool);
+
+  const result = await server.simulateTransaction(
+    new TransactionBuilder(
+      await server.getAccount(Keypair.random().publicKey()),
+      { fee: BASE_FEE, networkPassphrase: NETWORK_CONFIG.networkPassphrase }
+    )
+      .addOperation(contract.call("get_position", nativeToScVal(nullifierHash, { type: "bytes" })))
+      .setTimeout(30)
+      .build()
+  );
+
+  if (SorobanRpc.Api.isSimulationError(result)) {
+    return null;
+  }
+
+  const val = (result as SorobanRpc.Api.SimulateTransactionSuccessResponse).result?.retval;
+  if (!val) return null;
+
+  const native = scValToNative(val) as any;
+  return {
+    collateralCommitment: native.collateral_commitment,
+    debtCommitment: native.debt_commitment,
+    creditAttestation: native.credit_attestation,
+    nullifier: native.nullifier,
+    openedAt: Number(native.opened_at),
+    isActive: Boolean(native.is_active),
+  };
+}
+
 // ── Type re-exports ───────────────────────────────────────────────────────────
 export type { OpenPositionParams as OpenPositionTxParams };
+
