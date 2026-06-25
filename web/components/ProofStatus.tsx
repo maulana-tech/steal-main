@@ -2,42 +2,75 @@
 
 export type ProofState = "idle" | "generating" | "submitting" | "success" | "error";
 
-interface Props {
-  state: ProofState;
-}
-
-const STATE_CONFIG: Record<ProofState, { icon: string; label: string; color: string } | null> = {
-  idle: null,
+const CONFIG: Record<
+  Exclude<ProofState, "idle">,
+  { icon: string; label: string; sub?: string; bg: string; color: string; border: string }
+> = {
   generating: {
-    icon: "⚙️",
-    label: "Generating ZK proof in browser (WASM)… This may take 10–30 seconds.",
-    color: "border-violet-700 bg-violet-950/30 text-violet-300",
+    icon: "⚙",
+    label: "Generating ZK proof in browser…",
+    sub: "WASM is running. This takes 10–30s. Private inputs never leave your device.",
+    bg: "rgba(124,58,237,0.06)",
+    color: "#a78bfa",
+    border: "rgba(124,58,237,0.2)",
   },
   submitting: {
-    icon: "📡",
-    label: "Submitting proof to Stellar testnet…",
-    color: "border-blue-700 bg-blue-950/30 text-blue-300",
+    icon: "↑",
+    label: "Submitting to Stellar testnet…",
+    bg: "rgba(96,165,250,0.06)",
+    color: "#60a5fa",
+    border: "rgba(96,165,250,0.2)",
   },
   success: {
-    icon: "✅",
-    label: "Proof verified on-chain. Transaction confirmed.",
-    color: "border-green-700 bg-green-950/30 text-green-300",
+    icon: "✓",
+    label: "Proof verified on-chain.",
+    sub: "Transaction confirmed on Stellar testnet.",
+    bg: "rgba(34,197,94,0.06)",
+    color: "#22c55e",
+    border: "rgba(34,197,94,0.2)",
   },
   error: {
-    icon: "❌",
-    label: "Proof generation or submission failed. Check console for details.",
-    color: "border-red-700 bg-red-950/30 text-red-300",
+    icon: "✕",
+    label: "Failed.",
+    sub: "Proof generation or submission failed. Check the console.",
+    bg: "rgba(239,68,68,0.06)",
+    color: "#ef4444",
+    border: "rgba(239,68,68,0.2)",
   },
 };
 
-export default function ProofStatus({ state }: Props) {
-  const config = STATE_CONFIG[state];
-  if (!config) return null;
+export default function ProofStatus({ state }: { state: ProofState }) {
+  if (state === "idle") return null;
+  const c = CONFIG[state];
 
   return (
-    <div className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-3 ${config.color}`}>
-      <span className="text-xl flex-shrink-0">{config.icon}</span>
-      <p>{config.label}</p>
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        padding: "12px 16px",
+        borderRadius: 8,
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontWeight: 700,
+          color: c.color,
+          flexShrink: 0,
+          marginTop: 1,
+        }}
+      >
+        {c.icon}
+      </span>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: c.color }}>{c.label}</div>
+        {c.sub && (
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{c.sub}</div>
+        )}
+      </div>
     </div>
   );
 }
