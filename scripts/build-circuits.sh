@@ -21,16 +21,16 @@ for CIRCUIT in "${CIRCUITS[@]}"; do
   nargo compile
 
   # Copy compiled artifact to web/public
-  cp "target/${CIRCUIT}.json" "$OUT_DIR/${CIRCUIT}.json"
+  cp "../target/${CIRCUIT}.json" "$OUT_DIR/${CIRCUIT}.json"
   echo "  Artifact → web/public/circuits/${CIRCUIT}.json"
 
-  # Generate UltraHonk verification key
-  echo "  Generating verification key…"
-  bb write_vk \
-    --scheme ultra_honk \
-    -b "target/${CIRCUIT}.json" \
-    -o "$OUT_DIR/${CIRCUIT}.vk"
-  echo "  VK → web/public/circuits/${CIRCUIT}.vk"
+  # Generate UltraHonk verification key (Skipped: bb CLI libunwind error on macOS)
+  echo "  Skipping verification key generation via bb CLI..."
+  # bb write_vk \
+  #   --scheme ultra_honk \
+  #   -b "../target/${CIRCUIT}.json" \
+  #   -o "$OUT_DIR/${CIRCUIT}.vk"
+  # echo "  VK → web/public/circuits/${CIRCUIT}.vk"
 done
 
 echo ""
