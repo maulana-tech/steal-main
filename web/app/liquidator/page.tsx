@@ -5,181 +5,269 @@ import WalletConnect from "@/components/WalletConnect";
 import ProofStatus, { ProofState } from "@/components/ProofStatus";
 import OraclePriceSlider from "@/components/OraclePriceSlider";
 
-// Mock positions — on-chain only commitments are visible
-const MOCK_POSITIONS = [
+const POSITIONS = [
   {
     id: "pos_001",
-    nullifier: "0x1a2b3c...",
-    collateralCommitment: "0xdeadbeef...a1",
-    debtCommitment: "0xfeedface...b2",
+    nullifier: "0x1a2b3c4d…",
+    collateralCommitment: "0xdeadbeef9f3a2b1c4e5d6f7a8b9c0d1e2f3a4b5c",
+    debtCommitment: "0xfeedface1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
     openedAt: "Ledger #12345",
+    // demo plaintext — in production from off-chain watcher
+    collateral: 500,
+    saltC: "0x1234",
+    debt: 600,
+    saltD: "0x5678",
   },
   {
     id: "pos_002",
-    nullifier: "0x4d5e6f...",
-    collateralCommitment: "0xcafebabe...c3",
-    debtCommitment: "0xbadf00d0...d4",
+    nullifier: "0x4d5e6f7a…",
+    collateralCommitment: "0xcafebabe2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d",
+    debtCommitment: "0xbadf00d03b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e",
     openedAt: "Ledger #12389",
+    collateral: 1000,
+    saltC: "0xabcd",
+    debt: 400,
+    saltD: "0xef01",
   },
 ];
 
 export default function LiquidatorPage() {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [oraclePrice, setOraclePrice] = useState<number>(100_000);
-  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<string | null>(null);
+  const [oraclePrice, setOraclePrice] = useState(100_000);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [proofState, setProofState] = useState<ProofState>("idle");
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  // In a real scenario the liquidator runs a watcher that decrypts positions
-  // they've been given permission to monitor (via shared view key or public data).
-  // For demo: liquidator has the plaintext values of pos_001.
-  const DEMO_PLAINTEXT = {
-    collateral: 500,
-    saltC: "0x1234...",
-    debt: 600, // unhealthy at current price
-    saltD: "0x5678...",
-  };
-
-  async function handleLiquidate(positionId: string) {
-    if (!walletAddress) return;
-    setSelectedPosition(positionId);
-
+  async function handleLiquidate(pos: (typeof POSITIONS)[0]) {
+    if (!wallet) return;
+    setSelectedId(pos.id);
     try {
       setProofState("generating");
-
       const { ProofGenerator } = await import("@eclipse/proof-gen");
       const gen = await ProofGenerator.create();
-
       await gen.proveLiquidate({
-        collateral_commitment: MOCK_POSITIONS[0].collateralCommitment,
-        debt_commitment: MOCK_POSITIONS[0].debtCommitment,
+        collateral_commitment: pos.collateralCommitment,
+        debt_commitment: pos.debtCommitment,
         oracle_price_usd: oraclePrice,
         liq_threshold_bps: 100,
-        position_id: MOCK_POSITIONS[0].nullifier,
-        collateral: DEMO_PLAINTEXT.collateral,
-        salt_c: DEMO_PLAINTEXT.saltC,
-        debt: DEMO_PLAINTEXT.debt,
-        salt_d: DEMO_PLAINTEXT.saltD,
+        position_id: pos.nullifier,
+        collateral: pos.collateral,
+        salt_c: pos.saltC,
+        debt: pos.debt,
+        salt_d: pos.saltD,
       });
-
       setProofState("submitting");
-      await new Promise((r) => setTimeout(r, 1500));
-      setTxHash("liq_" + Math.random().toString(36).slice(2));
+      await new Promise((r) => setTimeout(r, 1200));
+      setTxHash("liq_" + Math.random().toString(36).slice(2, 10));
       setProofState("success");
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       setProofState("error");
     }
   }
 
-  // Health factor estimate based on demo plaintext + current oracle price
-  const collateralValueUsd = (DEMO_PLAINTEXT.collateral * oraclePrice) / 1_000_000;
-  const demoHF = DEMO_PLAINTEXT.debt > 0 ? collateralValueUsd / DEMO_PLAINTEXT.debt : Infinity;
-  const isLiquidatable = demoHF < 1;
-
   return (
-    <main className="max-w-2xl mx-auto px-6 py-12">
-      <h1 className="text-3xl font-bold mb-2">
-        <span className="text-amber-400">Liquidator</span> Dashboard
-      </h1>
-      <p className="text-eclipse-muted mb-8 text-sm">
-        All positions below show only on-chain commitments. You can prove a
-        position is unhealthy and liquidate it without knowing the exact numbers.
-      </p>
+    <div style={{ minHeight: "100vh", paddingBottom: 64 }}>
+      <header
+        style={{
+          borderBottom: "1px solid var(--border)",
+          padding: "16px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <a href="/" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>
+          ← Eclipse
+        </a>
+        <span
+          style={{
+            fontSize: 12,
+            padding: "4px 10px",
+            borderRadius: 6,
+            background: "rgba(245,158,11,0.1)",
+            color: "var(--amber)",
+            border: "1px solid rgba(245,158,11,0.2)",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          Liquidator
+        </span>
+      </header>
 
-      <WalletConnect onConnect={setWalletAddress} />
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 24px" }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 8 }}>
+          Liquidations
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 28, lineHeight: 1.6 }}>
+          All positions show only on-chain commitments. Generate a ZK proof that a
+          position is unhealthy — without seeing the actual values.
+        </p>
 
-      {walletAddress && (
-        <div className="mt-8 space-y-6">
-          {/* Oracle price slider — the key demo interaction */}
-          <div className="rounded-xl border border-eclipse-border bg-eclipse-surface p-4">
-            <p className="text-sm text-eclipse-muted mb-3">
-              Drop the oracle price below to make position 001 liquidatable:
-            </p>
+        <WalletConnect onConnect={setWallet} />
+
+        {wallet && (
+          <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
             <OraclePriceSlider value={oraclePrice} onChange={setOraclePrice} />
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-sm">Demo HF for pos_001:</span>
-              <span
-                className={`font-mono font-bold ${
-                  isLiquidatable ? "text-red-400" : "text-green-400"
-                }`}
-              >
-                {isFinite(demoHF) ? demoHF.toFixed(3) : "∞"}
-              </span>
-              {isLiquidatable && (
-                <span className="text-xs text-red-400 bg-red-900/30 px-2 py-0.5 rounded">
-                  LIQUIDATABLE
-                </span>
-              )}
+
+            <div className="label" style={{ marginTop: 8 }}>
+              Open Positions — commitments only
             </div>
-          </div>
 
-          {/* Position list */}
-          <div className="space-y-4">
-            <h2 className="font-semibold text-sm text-eclipse-muted uppercase tracking-wider">
-              Open Positions (on-chain view — commitments only)
-            </h2>
+            {POSITIONS.map((pos) => {
+              const colUsd = (pos.collateral * oraclePrice) / 1_000_000;
+              const hf = pos.debt > 0 ? colUsd / pos.debt : Infinity;
+              const liquidatable = hf < 1;
 
-            {MOCK_POSITIONS.map((pos) => (
-              <div
-                key={pos.id}
-                className="rounded-xl border border-eclipse-border bg-eclipse-surface p-5"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="font-mono text-xs text-eclipse-muted">{pos.id}</p>
-                    <p className="text-xs text-eclipse-muted mt-1">{pos.openedAt}</p>
-                  </div>
-                  {pos.id === "pos_001" && isLiquidatable && (
-                    <span className="text-xs text-red-400 bg-red-900/30 px-2 py-1 rounded">
-                      Unhealthy
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-xs text-eclipse-muted font-mono truncate">
-                  Collateral: {pos.collateralCommitment}
-                </p>
-                <p className="text-xs text-eclipse-muted font-mono truncate">
-                  Debt: {pos.debtCommitment}
-                </p>
-                <p className="text-xs text-eclipse-muted mt-1 italic">
-                  ← Actual amounts hidden on-chain
-                </p>
-
-                {pos.id === "pos_001" && (
-                  <button
-                    onClick={() => handleLiquidate(pos.id)}
-                    disabled={!isLiquidatable || proofState === "generating" || proofState === "submitting"}
-                    className="mt-4 w-full py-2 rounded-lg bg-amber-600 hover:bg-amber-500
-                      disabled:opacity-40 disabled:cursor-not-allowed font-semibold text-sm transition-colors"
+              return (
+                <div
+                  key={pos.id}
+                  className="card"
+                  style={{
+                    borderColor: liquidatable ? "rgba(239,68,68,0.3)" : "var(--border)",
+                    transition: "border-color 0.3s",
+                  }}
+                >
+                  {/* Position header */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 12,
+                    }}
                   >
-                    {selectedPosition === pos.id && proofState === "generating"
+                    <div>
+                      <div
+                        className="mono"
+                        style={{ fontSize: 13, fontWeight: 600 }}
+                      >
+                        {pos.id}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                        {pos.openedAt}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: liquidatable ? "var(--red)" : "var(--green)",
+                        }}
+                      >
+                        HF {isFinite(hf) ? hf.toFixed(2) : "∞"}
+                      </span>
+                      {liquidatable && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 7px",
+                            borderRadius: 4,
+                            background: "var(--red-glow)",
+                            color: "var(--red)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                          }}
+                        >
+                          LIQUIDATABLE
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Commitments */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      padding: "10px 12px",
+                      background: "#070707",
+                      borderRadius: 6,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <CommitRow label="collateral" value={pos.collateralCommitment} />
+                    <CommitRow label="debt" value={pos.debtCommitment} />
+                    <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 4, fontStyle: "italic" }}>
+                      ← Actual amounts hidden on-chain
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn btn-amber"
+                    onClick={() => handleLiquidate(pos)}
+                    disabled={
+                      !liquidatable ||
+                      (selectedId === pos.id &&
+                        (proofState === "generating" || proofState === "submitting"))
+                    }
+                    style={{ fontSize: 13 }}
+                  >
+                    {selectedId === pos.id && proofState === "generating"
                       ? "Generating Liquidation Proof…"
-                      : "Generate ZK Proof & Liquidate"}
+                      : liquidatable
+                      ? "Prove HF < 1 and Liquidate"
+                      : "Position Healthy"}
                   </button>
-                )}
-              </div>
-            ))}
-          </div>
+                </div>
+              );
+            })}
 
-          <ProofStatus state={proofState} />
+            <ProofStatus state={proofState} />
 
-          {txHash && (
-            <p className="text-xs text-eclipse-muted">
-              Liquidation tx:{" "}
-              <a
-                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-amber-400 underline"
+            {txHash && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--muted)",
+                  fontFamily: "var(--font-mono)",
+                  padding: "8px 12px",
+                  background: "var(--surface)",
+                  borderRadius: 6,
+                }}
               >
-                {txHash}
-              </a>
-            </p>
-          )}
-        </div>
-      )}
-    </main>
+                Liquidation tx:{" "}
+                <a
+                  href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--amber)" }}
+                >
+                  {txHash}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CommitRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        fontSize: 11,
+        fontFamily: "var(--font-mono)",
+      }}
+    >
+      <span style={{ color: "var(--muted)", minWidth: 80 }}>{label}:</span>
+      <span
+        style={{
+          color: "#555",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
