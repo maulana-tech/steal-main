@@ -104,6 +104,31 @@ export async function deriveViewKey(walletSignature: Uint8Array): Promise<Crypto
 }
 
 /**
+ * Generates a random 128-bit key as a hex string with "vk_" prefix.
+ */
+export function generateRandomViewKeyHex(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return "vk_" + Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Imports a hex string key with "vk_" prefix as an AES-GCM CryptoKey.
+ */
+export async function importViewKey(hexKey: string): Promise<CryptoKey> {
+  const rawHex = hexKey.replace("vk_", "");
+  const bytes = new Uint8Array(
+    rawHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+  );
+  return crypto.subtle.importKey(
+    "raw",
+    bytes,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+/**
  * Encrypts position secrets with the borrower's view key.
  */
 export async function encryptSecrets(
