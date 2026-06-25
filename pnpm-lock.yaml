@@ -13,10 +13,6 @@ importers:
         version: 5.9.3
 
   packages/crypto:
-    dependencies:
-      '@aztec/bb.js':
-        specifier: 0.58.0
-        version: 0.58.0
     devDependencies:
       typescript:
         specifier: ^5.4.0
