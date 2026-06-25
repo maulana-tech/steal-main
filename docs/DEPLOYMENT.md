@@ -34,3 +34,13 @@
 - soroban-sdk: `22.0.8`
 - stellar-cli: `21.4.1`
 - Rust target: `wasm32-unknown-unknown` release
+
+## Initialization & Seeding (2026-06-25)
+
+The contracts were initialized and seeded with demo data:
+- **Oracle Initialization**: [9b3fab06...](https://stellar.expert/explorer/testnet/tx/9b3fab0648be10420582a58c72417b4ae76830d713cc23df46d8e074678e0f9f)
+- **CreditIssuer Initialization**: [fc92acc0...](https://stellar.expert/explorer/testnet/tx/fc92acc0fac1a5b84b488f91329546f1681d26d0d192c17df6d3c9b65ef148d7)
+- **LendingPool Initialization**: [9feacee7...](https://stellar.expert/explorer/testnet/tx/9feacee7199531aee835b7d3a2967a3d307ded70020b92c3a8e4f33001abf678)
+- **Oracle Price Seed (XLM = $0.10)**: [45989925...](https://stellar.expert/explorer/testnet/tx/45989925529e7b139d47ecaf2d6539cab17349fe60f2ce13bda3455a85c9aaa4)
+- **Credit score attestation (720)**: [94a61030...](https://stellar.expert/explorer/testnet/tx/94a610300986bc779bf201b59949d2429d6090d8ba6ea68bce2ec163f40c7f23)
+
