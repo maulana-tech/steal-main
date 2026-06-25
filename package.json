@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "setup": "bash scripts/setup.sh",
-    "build:circuits": "node scripts/gen-vk.mjs",
+    "build:circuits": "bash scripts/build-circuits.sh && node scripts/gen-vk.mjs",
     "build:contracts": "bash scripts/build-contracts.sh",
     "deploy": "bash scripts/deploy.sh",
     "dev": "pnpm --filter web dev",
