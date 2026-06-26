@@ -83,7 +83,8 @@ export async function invokeContract(params: {
 
   const sendResult = await server.sendTransaction(signedTx);
   if (sendResult.status === "ERROR") {
-    throw new Error(`Transaction failed: ${sendResult.errorResult}`);
+    console.error("Soroban sendTransaction error details:", sendResult);
+    throw new Error(`Transaction failed: ${JSON.stringify(sendResult)}`);
   }
 
   // Poll for completion
@@ -94,7 +95,8 @@ export async function invokeContract(params: {
   } while (getResult.status === "NOT_FOUND");
 
   if (getResult.status === "FAILED") {
-    throw new Error(`Transaction failed on-chain: ${sendResult.hash}`);
+    console.error("Soroban getTransaction failed details:", getResult);
+    throw new Error(`Transaction failed on-chain: ${sendResult.hash}. Result XDR: ${getResult.resultXdr}`);
   }
 
   return sendResult.hash;
