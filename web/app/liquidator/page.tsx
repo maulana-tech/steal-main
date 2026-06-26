@@ -6,7 +6,8 @@ import { WalletGate } from "@/components/wallet/WalletGate";
 import ProofStatus, { ProofState } from "@/components/ProofStatus";
 import OraclePriceSlider from "@/components/OraclePriceSlider";
 
-export default function LiquidatorPage({ embedded }: { embedded?: boolean }) {
+export default function LiquidatorPage() {
+  const embedded = false;
   const wallet = useWallet().address;
   const [oraclePrice, setOraclePrice] = useState(100_000);
   const [selectedId, setSelectedId] = useState<string | null>(null);
