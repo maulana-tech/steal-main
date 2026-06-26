@@ -151,8 +151,19 @@ export default function AuditorPage() {
           justifyContent: "space-between",
         }}
       >
-        <a href="/" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>
-          ← Eclipse
+        <a
+          href="/"
+          style={{
+            fontSize: 13,
+            color: "var(--muted)",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <img src="/logo/steal-logo-light.png" alt="Steal Logo" style={{ height: 18, width: "auto" }} />
+          <span style={{ fontWeight: 500, color: "var(--foreground)" }}>Steal</span>
         </a>
         <span
           style={{
