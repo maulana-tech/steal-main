@@ -1,10 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-
-// Demo wallet (mock). Uses the testnet deployer address so it lines up with the
-// on-chain tx signature. Connection is faked — no real wallet kit yet.
-const DEMO_ADDRESS = "GCMQN373E772MJ2K3HC62UGX3USHBFHNKDCQCOVRBOBPOMAJHC242VBG";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import {
+  StellarWalletsKit,
+  Networks,
+  KitEventType,
+} from "@creit.tech/stellar-wallets-kit";
+import { FreighterModule } from "@creit.tech/stellar-wallets-kit/modules/freighter";
+import { LobstrModule } from "@creit.tech/stellar-wallets-kit/modules/lobstr";
+import { xBullModule } from "@creit.tech/stellar-wallets-kit/modules/xbull";
 
 type WalletValue = {
   address: string | null;
@@ -17,9 +21,34 @@ type WalletValue = {
   // Funds the account with testnet XLM via Friendbot. Auto-connects first if
   // the wallet isn't connected yet, so a user can claim before connecting.
   claimFaucet: () => Promise<void>;
+  signTransaction: (xdr: string) => Promise<string>;
 };
 
 const WalletContext = createContext<WalletValue | null>(null);
+
+let isKitInitialized = false;
+function initKit() {
+  if (typeof window === "undefined") return;
+  if (isKitInitialized) return;
+
+  StellarWalletsKit.init({
+    modules: [
+      new FreighterModule(),
+      new LobstrModule(),
+      new xBullModule(),
+    ],
+    network: Networks.TESTNET,
+  });
+
+  // Keep track of the selected wallet in localStorage
+  StellarWalletsKit.on(KitEventType.WALLET_SELECTED, (event) => {
+    if (event.payload.id) {
+      localStorage.setItem("selectedWallet", event.payload.id);
+    }
+  });
+
+  isKitInitialized = true;
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
@@ -27,6 +56,27 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [faucetLoading, setFaucetLoading] = useState(false);
   const [faucetMessage, setFaucetMessage] = useState<string | null>(null);
+
+  // Auto-connect saved wallet on mount
+  useEffect(() => {
+    initKit();
+    const savedWallet = localStorage.getItem("selectedWallet");
+    if (savedWallet) {
+      try {
+        StellarWalletsKit.setWallet(savedWallet);
+        StellarWalletsKit.fetchAddress().then(({ address }) => {
+          setAddress(address);
+          fetchBalance(address);
+        }).catch((e) => {
+          console.error("Auto-connect failed:", e);
+          localStorage.removeItem("selectedWallet");
+        });
+      } catch (e) {
+        console.error("Error setting wallet:", e);
+        localStorage.removeItem("selectedWallet");
+      }
+    }
+  }, []);
 
   async function fetchBalance(addr: string) {
     try {
@@ -50,16 +100,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   async function connect() {
     setConnecting(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setAddress(DEMO_ADDRESS);
-    await fetchBalance(DEMO_ADDRESS);
-    setConnecting(false);
+    try {
+      initKit();
+      const res = await StellarWalletsKit.authModal();
+      setAddress(res.address);
+      await fetchBalance(res.address);
+    } catch (e: any) {
+      console.error("Failed to connect wallet:", e);
+      // Code -1 is returned when the user closes the modal
+      if (e?.code !== -1) {
+        alert(e?.message || "Failed to connect wallet");
+      }
+    } finally {
+      setConnecting(false);
+    }
   }
 
-  function disconnect() {
+  async function disconnect() {
+    try {
+      await StellarWalletsKit.disconnect();
+    } catch (e) {
+      console.error("Failed to disconnect wallet:", e);
+    }
     setAddress(null);
     setBalance(null);
     setFaucetMessage(null);
+    localStorage.removeItem("selectedWallet");
   }
 
   async function fundAddress(addr: string) {
@@ -85,18 +151,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   async function claimFaucet() {
     let addr = address;
     if (!addr) {
-      setConnecting(true);
-      await new Promise((r) => setTimeout(r, 400));
-      addr = DEMO_ADDRESS;
-      setAddress(addr);
-      setConnecting(false);
+      await connect();
+      return;
     }
     await fundAddress(addr);
   }
 
+  async function signTransaction(xdr: string): Promise<string> {
+    const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr);
+    return signedTxXdr;
+  }
+
   return (
     <WalletContext.Provider
-      value={{ address, balance, connecting, faucetLoading, faucetMessage, connect, disconnect, claimFaucet }}
+      value={{
+        address,
+        balance,
+        connecting,
+        faucetLoading,
+        faucetMessage,
+        connect,
+        disconnect,
+        claimFaucet,
+        signTransaction,
+      }}
     >
       {children}
 
