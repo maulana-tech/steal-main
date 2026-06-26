@@ -31,11 +31,20 @@ function initKit() {
   if (typeof window === "undefined") return;
   if (isKitInitialized) return;
 
+  const freighterMod = new FreighterModule();
+  freighterMod.productIcon = "/wallet-icons/freighter.png";
+
+  const lobstrMod = new LobstrModule();
+  lobstrMod.productIcon = "/wallet-icons/lobstr.png";
+
+  const xbullMod = new xBullModule();
+  xbullMod.productIcon = "/wallet-icons/xbull.png";
+
   StellarWalletsKit.init({
     modules: [
-      new FreighterModule(),
-      new LobstrModule(),
-      new xBullModule(),
+      freighterMod,
+      lobstrMod,
+      xbullMod,
     ],
     network: Networks.TESTNET,
   });
