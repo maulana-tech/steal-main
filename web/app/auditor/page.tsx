@@ -11,7 +11,8 @@ interface Decrypted {
   healthFactor: number;
 }
 
-export default function AuditorPage({ embedded }: { embedded?: boolean }) {
+export default function AuditorPage() {
+  const embedded = false; // standalone page
   const [viewKey, setViewKey] = useState("");
   const [posId, setPosId] = useState("pos_001");
   const [decrypted, setDecrypted] = useState<Decrypted | null>(null);
