@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Menu, X, Globe, MessageCircle } from "lucide-react";
+import { FaucetButton } from "@/components/wallet/FaucetButton";
 
 // Collapses Docs / socials behind a hamburger. Opens on hover or click; the
 // items expand (max-width) and slide in to the left of the button for a smooth
@@ -27,6 +28,7 @@ export function NavMenu() {
             className="flex items-center overflow-hidden"
           >
             <div className="flex items-center gap-3 pr-3">
+              <FaucetButton />
               <a
                 href="#how"
                 className="whitespace-nowrap text-sm font-medium text-white/80 hover:text-white"
