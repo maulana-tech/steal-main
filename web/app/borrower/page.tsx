@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import WalletConnect from "@/components/WalletConnect";
+import { useWallet } from "@/components/wallet/WalletProvider";
+import { WalletGate } from "@/components/wallet/WalletGate";
 import HealthFactorMeter from "@/components/HealthFactorMeter";
 import ProofStatus, { ProofState } from "@/components/ProofStatus";
 import OraclePriceSlider from "@/components/OraclePriceSlider";
 
-export default function BorrowerPage() {
+export default function BorrowerPage({ embedded }: { embedded?: boolean }) {
   const [activeTab, setActiveTab] = useState<"open" | "manage">("open");
-  const [wallet, setWallet] = useState<string | null>(null);
+  const wallet = useWallet().address;
 
   // ── Preloaded Cryptographic Prover ──────────────────────────────────────────
   const [proofGenerator, setProofGenerator] = useState<any | null>(null);
@@ -457,8 +458,9 @@ export default function BorrowerPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", padding: "0 0 64px" }}>
+    <div style={{ minHeight: embedded ? "auto" : "100vh", padding: "0 0 64px" }}>
       {/* Header */}
+      {!embedded && (
       <header
         style={{
           borderBottom: "1px solid var(--border)",
@@ -495,6 +497,7 @@ export default function BorrowerPage() {
           Borrower
         </span>
       </header>
+      )}
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 24px" }}>
         {/* Title */}
@@ -513,7 +516,7 @@ export default function BorrowerPage() {
           Your parameters are protected by zero-knowledge proofs.
         </p>
 
-        <WalletConnect onConnect={setWallet} />
+        <WalletGate />
 
         {wallet && (
           <div style={{ marginTop: 24 }}>
