@@ -11,7 +11,7 @@ interface Decrypted {
   healthFactor: number;
 }
 
-export default function AuditorPage() {
+export default function AuditorPage({ embedded }: { embedded?: boolean }) {
   const [viewKey, setViewKey] = useState("");
   const [posId, setPosId] = useState("pos_001");
   const [decrypted, setDecrypted] = useState<Decrypted | null>(null);
@@ -139,7 +139,8 @@ export default function AuditorPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", paddingBottom: 64 }}>
+    <div style={{ minHeight: embedded ? "auto" : "100vh", paddingBottom: 64 }}>
+      {!embedded && (
       <header
         style={{
           borderBottom: "1px solid var(--border)",
@@ -166,6 +167,7 @@ export default function AuditorPage() {
           Auditor
         </span>
       </header>
+      )}
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 24px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 8 }}>
