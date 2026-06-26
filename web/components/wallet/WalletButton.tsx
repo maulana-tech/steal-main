@@ -6,8 +6,7 @@ import { Wallet, ChevronDown, Droplets, Power } from "lucide-react";
 import { useWallet } from "./WalletProvider";
 
 export function WalletButton() {
-  const { address, balance, connecting, faucetLoading, faucetMessage, connect, disconnect, requestFaucet } =
-    useWallet();
+  const { address, balance, connecting, faucetLoading, connect, disconnect, claimFaucet } = useWallet();
   const [open, setOpen] = useState(false);
 
   if (!address) {
@@ -68,22 +67,13 @@ export function WalletButton() {
 
               <button
                 type="button"
-                onClick={requestFaucet}
+                onClick={claimFaucet}
                 disabled={faucetLoading}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-white/15 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-white/5 disabled:opacity-60"
               >
                 <Droplets className="h-3.5 w-3.5" />
                 {faucetLoading ? "Funding…" : "Friendbot faucet"}
               </button>
-              {faucetMessage ? (
-                <p
-                  className={`mt-2 text-center text-[11px] ${
-                    faucetMessage.includes("Success") ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {faucetMessage}
-                </p>
-              ) : null}
 
               <button
                 type="button"
