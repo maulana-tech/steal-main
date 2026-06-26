@@ -1,0 +1,7 @@
+{
+  "buildCommand": "pnpm --filter eclipse-web build",
+  "outputDirectory": "web/.next",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "rootDirectory": "web"
+}
