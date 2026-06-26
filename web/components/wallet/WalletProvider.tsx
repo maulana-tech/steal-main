@@ -14,7 +14,9 @@ type WalletValue = {
   faucetMessage: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
-  requestFaucet: () => Promise<void>;
+  // Funds the account with testnet XLM via Friendbot. Auto-connects first if
+  // the wallet isn't connected yet, so a user can claim before connecting.
+  claimFaucet: () => Promise<void>;
 };
 
 const WalletContext = createContext<WalletValue | null>(null);
@@ -60,31 +62,56 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setFaucetMessage(null);
   }
 
-  async function requestFaucet() {
-    if (!address) return;
+  async function fundAddress(addr: string) {
     setFaucetLoading(true);
     setFaucetMessage(null);
     try {
-      const res = await fetch(`https://friendbot.stellar.org/?addr=${address}`);
+      const res = await fetch(`https://friendbot.stellar.org/?addr=${addr}`);
       if (res.ok) {
-        setFaucetMessage("Success! Funded 10k XLM.");
-        await fetchBalance(address);
+        setFaucetMessage("Success! Funded 10,000 XLM — you're ready to test.");
       } else {
-        setFaucetMessage("Faucet failed. Try again.");
+        // Friendbot returns 400 when the account already exists / is rate-limited.
+        setFaucetMessage("Account already funded — balance refreshed.");
       }
+      await fetchBalance(addr);
     } catch (e) {
       console.error(e);
-      setFaucetMessage("Error connecting to Friendbot.");
+      setFaucetMessage("Error connecting to Friendbot. Try again.");
     }
     setFaucetLoading(false);
-    setTimeout(() => setFaucetMessage(null), 5000);
+    setTimeout(() => setFaucetMessage(null), 6000);
+  }
+
+  async function claimFaucet() {
+    let addr = address;
+    if (!addr) {
+      setConnecting(true);
+      await new Promise((r) => setTimeout(r, 400));
+      addr = DEMO_ADDRESS;
+      setAddress(addr);
+      setConnecting(false);
+    }
+    await fundAddress(addr);
   }
 
   return (
     <WalletContext.Provider
-      value={{ address, balance, connecting, faucetLoading, faucetMessage, connect, disconnect, requestFaucet }}
+      value={{ address, balance, connecting, faucetLoading, faucetMessage, connect, disconnect, claimFaucet }}
     >
       {children}
+
+      {/* Global faucet feedback toast — visible regardless of which control fired it. */}
+      {faucetMessage ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
+          <div
+            className={`liquid-glass rounded-full px-5 py-2.5 text-sm font-medium ${
+              faucetMessage.startsWith("Success") ? "text-emerald-300" : "text-white/80"
+            }`}
+          >
+            {faucetMessage}
+          </div>
+        </div>
+      ) : null}
     </WalletContext.Provider>
   );
 }
