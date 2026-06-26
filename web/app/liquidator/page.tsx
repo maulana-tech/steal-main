@@ -8,7 +8,8 @@ import OraclePriceSlider from "@/components/OraclePriceSlider";
 
 export default function LiquidatorPage() {
   const embedded = false;
-  const wallet = useWallet().address;
+  const { address: walletAddress, signTransaction } = useWallet();
+  const wallet = walletAddress;
   const [oraclePrice, setOraclePrice] = useState(100_000);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [proofState, setProofState] = useState<ProofState>("idle");
@@ -147,16 +148,16 @@ export default function LiquidatorPage() {
       setProofState("submitting");
       
       const { liquidate } = await import("@eclipse/sdk");
-      const { Keypair } = await import("@stellar/stellar-sdk");
       
-      const demoSecret = "SCIYRBV6UGM6RCKW7PZIZGXTXTH3ALRHMFZAH52YTITI7YEP3N2H7REQ";
-      const liquidatorKeypair = Keypair.fromSecret(demoSecret);
       const NATIVE_TOKEN_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
       const contractFormat = proofGenerator.toContractFormat(generatedProof);
 
       const txResultHash = await liquidate({
-        liquidator: liquidatorKeypair,
+        liquidator: {
+          publicKey: walletAddress!,
+          signTransaction: signTransaction!,
+        },
         nullifierHash: Buffer.from(pos.nullifier.replace("0x", ""), "hex"),
         collateralAsset: NATIVE_TOKEN_ID,
         collateralAmount: BigInt(pos.collateral) * 10000000n, // native token scale (7 decimals)
