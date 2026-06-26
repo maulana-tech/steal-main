@@ -10,7 +10,8 @@ import OraclePriceSlider from "@/components/OraclePriceSlider";
 export default function BorrowerPage() {
   const embedded = false;
   const [activeTab, setActiveTab] = useState<"open" | "manage">("open");
-  const wallet = useWallet().address;
+  const { address: walletAddress, signTransaction } = useWallet();
+  const wallet = walletAddress;
 
   // ── Preloaded Cryptographic Prover ──────────────────────────────────────────
   const [proofGenerator, setProofGenerator] = useState<any | null>(null);
@@ -131,16 +132,16 @@ export default function BorrowerPage() {
       setProofState("submitting");
       
       const { openPosition } = await import("@eclipse/sdk");
-      const { Keypair } = await import("@stellar/stellar-sdk");
       
-      const demoSecret = "SCIYRBV6UGM6RCKW7PZIZGXTXTH3ALRHMFZAH52YTITI7YEP3N2H7REQ";
-      const borrowerKeypair = Keypair.fromSecret(demoSecret);
       const NATIVE_TOKEN_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
       const contractFormat = proofGenerator.toContractFormat(generatedProof);
 
       const txResultHash = await openPosition({
-        borrower: borrowerKeypair,
+        borrower: {
+          publicKey: walletAddress!,
+          signTransaction: signTransaction!,
+        },
         collateralAsset: NATIVE_TOKEN_ID,
         collateralCommitment: Buffer.from(cc.toString(16).padStart(64, "0"), "hex"),
         debtCommitment: Buffer.from(dc.toString(16).padStart(64, "0"), "hex"),
@@ -282,13 +283,14 @@ export default function BorrowerPage() {
 
       setManageProofState("submitting");
 
-      const demoSecret = "SCIYRBV6UGM6RCKW7PZIZGXTXTH3ALRHMFZAH52YTITI7YEP3N2H7REQ";
-      const borrowerKeypair = Keypair.fromSecret(demoSecret);
       const NATIVE_TOKEN_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
       const contractFormat = proofGenerator.toContractFormat(generatedProof);
       const txResultHash = await repayWithdraw({
-        borrower: borrowerKeypair,
+        borrower: {
+          publicKey: walletAddress!,
+          signTransaction: signTransaction!,
+        },
         nullifierHash: Buffer.from(selectedNullifierHex, "hex"),
         collateralAsset: NATIVE_TOKEN_ID,
         newCollateralCommitment: Buffer.from(new_cc.toString(16).padStart(64, "0"), "hex"),
@@ -406,13 +408,14 @@ export default function BorrowerPage() {
 
       setManageProofState("submitting");
 
-      const demoSecret = "SCIYRBV6UGM6RCKW7PZIZGXTXTH3ALRHMFZAH52YTITI7YEP3N2H7REQ";
-      const borrowerKeypair = Keypair.fromSecret(demoSecret);
       const NATIVE_TOKEN_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
       const contractFormat = proofGenerator.toContractFormat(generatedProof);
       const txResultHash = await repayWithdraw({
-        borrower: borrowerKeypair,
+        borrower: {
+          publicKey: walletAddress!,
+          signTransaction: signTransaction!,
+        },
         nullifierHash: Buffer.from(selectedNullifierHex, "hex"),
         collateralAsset: NATIVE_TOKEN_ID,
         newCollateralCommitment: Buffer.from(new_cc.toString(16).padStart(64, "0"), "hex"),
