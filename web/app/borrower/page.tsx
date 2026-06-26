@@ -7,7 +7,8 @@ import HealthFactorMeter from "@/components/HealthFactorMeter";
 import ProofStatus, { ProofState } from "@/components/ProofStatus";
 import OraclePriceSlider from "@/components/OraclePriceSlider";
 
-export default function BorrowerPage({ embedded }: { embedded?: boolean }) {
+export default function BorrowerPage() {
+  const embedded = false;
   const [activeTab, setActiveTab] = useState<"open" | "manage">("open");
   const wallet = useWallet().address;
 
