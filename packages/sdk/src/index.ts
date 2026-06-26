@@ -27,16 +27,33 @@ export function getRpcServer(): SorobanRpc.Server {
   return new SorobanRpc.Server(NETWORK_CONFIG.rpcUrl, { allowHttp: false });
 }
 
+export type Signer = Keypair | {
+  publicKey: string;
+  signTransaction: (txXdr: string) => Promise<string>;
+};
+
+function getPublicKey(signer: Signer): string {
+  if (typeof (signer as any).publicKey === "function") {
+    return (signer as any).publicKey();
+  }
+  return (signer as any).publicKey;
+}
+
+const isKeypair = (signer: Signer): signer is Keypair => {
+  return signer && typeof (signer as any).sign === "function";
+};
+
 // ── Generic contract invoker ──────────────────────────────────────────────────
 
 export async function invokeContract(params: {
   contractId: string;
   method: string;
   args: xdr.ScVal[];
-  source: Keypair;
+  source: Signer;
 }): Promise<unknown> {
   const server = getRpcServer();
-  const account = await server.getAccount(params.source.publicKey());
+  const sourcePubKey = getPublicKey(params.source);
+  const account = await server.getAccount(sourcePubKey);
 
   const contract = new Contract(params.contractId);
   const tx = new TransactionBuilder(account, {
@@ -53,9 +70,18 @@ export async function invokeContract(params: {
   }
 
   const preparedTx = SorobanRpc.assembleTransaction(tx, simResult).build();
-  preparedTx.sign(params.source);
 
-  const sendResult = await server.sendTransaction(preparedTx);
+  let signedTx;
+  if (isKeypair(params.source)) {
+    preparedTx.sign(params.source);
+    signedTx = preparedTx;
+  } else {
+    const xdrStr = preparedTx.toXDR();
+    const signedXdr = await params.source.signTransaction(xdrStr);
+    signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_CONFIG.networkPassphrase);
+  }
+
+  const sendResult = await server.sendTransaction(signedTx);
   if (sendResult.status === "ERROR") {
     throw new Error(`Transaction failed: ${sendResult.errorResult}`);
   }
@@ -102,7 +128,7 @@ export async function getOraclePrice(asset: string): Promise<bigint> {
 // ── LendingPool helpers ───────────────────────────────────────────────────────
 
 export interface OpenPositionParams {
-  borrower: Keypair;
+  borrower: Signer;
   collateralAsset: string;
   collateralCommitment: Buffer;   // 32 bytes
   debtCommitment: Buffer;         // 32 bytes
@@ -119,7 +145,7 @@ export async function openPosition(p: OpenPositionParams): Promise<string> {
     contractId: NETWORK_CONFIG.contracts.lendingPool,
     method: "open_position",
     args: [
-      nativeToScVal(p.borrower.publicKey(), { type: "address" }),
+      nativeToScVal(getPublicKey(p.borrower), { type: "address" }),
       nativeToScVal(p.collateralAsset, { type: "address" }),
       nativeToScVal(p.collateralCommitment, { type: "bytes" }),
       nativeToScVal(p.debtCommitment, { type: "bytes" }),
@@ -146,7 +172,7 @@ export async function openPosition(p: OpenPositionParams): Promise<string> {
 }
 
 export interface LiquidateParams {
-  liquidator: Keypair;
+  liquidator: Signer;
   nullifierHash: Buffer;
   collateralAsset: string;
   collateralAmount: bigint;
@@ -159,7 +185,7 @@ export async function liquidate(p: LiquidateParams): Promise<string> {
     contractId: NETWORK_CONFIG.contracts.lendingPool,
     method: "liquidate",
     args: [
-      nativeToScVal(p.liquidator.publicKey(), { type: "address" }),
+      nativeToScVal(getPublicKey(p.liquidator), { type: "address" }),
       nativeToScVal(p.nullifierHash, { type: "bytes" }),
       nativeToScVal(p.collateralAsset, { type: "address" }),
       nativeToScVal(p.collateralAmount, { type: "i128" }),
@@ -182,7 +208,7 @@ export async function liquidate(p: LiquidateParams): Promise<string> {
 }
 
 export interface RepayWithdrawParams {
-  borrower: Keypair;
+  borrower: Signer;
   nullifierHash: Buffer;
   collateralAsset: string;
   newCollateralCommitment: Buffer;
@@ -198,7 +224,7 @@ export async function repayWithdraw(p: RepayWithdrawParams): Promise<string> {
     contractId: NETWORK_CONFIG.contracts.lendingPool,
     method: "repay_withdraw",
     args: [
-      nativeToScVal(p.borrower.publicKey(), { type: "address" }),
+      nativeToScVal(getPublicKey(p.borrower), { type: "address" }),
       nativeToScVal(p.nullifierHash, { type: "bytes" }),
       nativeToScVal(p.collateralAsset, { type: "address" }),
       nativeToScVal(p.newCollateralCommitment, { type: "bytes" }),
