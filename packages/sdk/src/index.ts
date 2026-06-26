@@ -61,7 +61,7 @@ export async function invokeContract(params: {
     networkPassphrase: NETWORK_CONFIG.networkPassphrase,
   })
     .addOperation(contract.call(params.method, ...params.args))
-    .setTimeout(30)
+    .setTimeout(300)
     .build();
 
   const simResult = await server.simulateTransaction(tx);
