@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import WalletConnect from "@/components/WalletConnect";
+import { useWallet } from "@/components/wallet/WalletProvider";
+import { WalletGate } from "@/components/wallet/WalletGate";
 import ProofStatus, { ProofState } from "@/components/ProofStatus";
 import OraclePriceSlider from "@/components/OraclePriceSlider";
 
-export default function LiquidatorPage() {
-  const [wallet, setWallet] = useState<string | null>(null);
+export default function LiquidatorPage({ embedded }: { embedded?: boolean }) {
+  const wallet = useWallet().address;
   const [oraclePrice, setOraclePrice] = useState(100_000);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [proofState, setProofState] = useState<ProofState>("idle");
@@ -172,7 +173,8 @@ export default function LiquidatorPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", paddingBottom: 64 }}>
+    <div style={{ minHeight: embedded ? "auto" : "100vh", paddingBottom: 64 }}>
+      {!embedded && (
       <header
         style={{
           borderBottom: "1px solid var(--border)",
@@ -199,6 +201,7 @@ export default function LiquidatorPage() {
           Liquidator
         </span>
       </header>
+      )}
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 24px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 8 }}>
@@ -209,7 +212,7 @@ export default function LiquidatorPage() {
           position is unhealthy — without seeing the actual values.
         </p>
 
-        <WalletConnect onConnect={setWallet} />
+        <WalletGate />
 
         {wallet && (
           <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
