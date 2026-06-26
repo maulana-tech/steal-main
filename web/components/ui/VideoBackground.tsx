@@ -14,6 +14,7 @@ export function VideoBackground() {
         loop
         playsInline
         preload="auto"
+        crossOrigin="anonymous"
         src={BG_VIDEO}
         className="absolute inset-0 h-full w-full object-cover"
       />
