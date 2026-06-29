@@ -264,11 +264,15 @@ export async function getPosition(nullifierHash: Buffer): Promise<Position | nul
   const server = getRpcServer();
   const contract = new Contract(NETWORK_CONFIG.contracts.lendingPool);
 
+  let account;
+  try {
+    account = await server.getAccount(Keypair.random().publicKey());
+  } catch {
+    return null;
+  }
+
   const result = await server.simulateTransaction(
-    new TransactionBuilder(
-      await server.getAccount(Keypair.random().publicKey()),
-      { fee: BASE_FEE, networkPassphrase: NETWORK_CONFIG.networkPassphrase }
-    )
+    new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_CONFIG.networkPassphrase })
       .addOperation(contract.call("get_position", nativeToScVal(nullifierHash, { type: "bytes" })))
       .setTimeout(30)
       .build()
