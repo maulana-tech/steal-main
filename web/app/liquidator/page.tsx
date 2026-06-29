@@ -83,9 +83,15 @@ export default function LiquidatorPage() {
                   saltD: "0x" + secrets.saltD.toString(16).padStart(64, "0"),
                   isMock: false,
                 });
+              } else {
+                // Position no longer active — clean up stale localStorage entry
+                localStorage.removeItem(k);
+                localStorage.removeItem(`vk_${nhHex}`);
               }
             } catch (err) {
-              console.error(`Failed to load position ${nhHex}:`, err);
+              console.warn(`Cleaning up stale position ${nhHex}:`, err);
+              localStorage.removeItem(k);
+              localStorage.removeItem(`vk_${nhHex}`);
             }
           }
         }
