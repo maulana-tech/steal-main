@@ -53,10 +53,21 @@ export default function AuditorPage() {
         const clean = posId.trim().replace("0x", "");
         const res = await getPosition(Buffer.from(clean, "hex"));
         if (active) {
+          if (res === null) {
+            // Position not found on-chain — clean up stale localStorage entry
+            localStorage.removeItem(`secrets_${clean}`);
+            localStorage.removeItem(`vk_${clean}`);
+            const keys = Object.keys(localStorage).filter(k => k.startsWith("secrets_"));
+            const nullifiers = keys.map(k => k.replace("secrets_", ""));
+            setLocalPositions(nullifiers);
+          }
           setChainPosition(res);
         }
       } catch (e) {
-        console.error("Error loading chain pos:", e);
+        console.warn("Cleaning up stale position:", e);
+        const clean = posId.trim().replace("0x", "");
+        localStorage.removeItem(`secrets_${clean}`);
+        localStorage.removeItem(`vk_${clean}`);
         if (active) {
           setChainPosition(null);
         }
