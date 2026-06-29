@@ -170,9 +170,9 @@ export default function AuditorPage() {
             fontSize: 12,
             padding: "4px 10px",
             borderRadius: 6,
-            background: "rgba(16,185,129,0.1)",
-            color: "var(--emerald)",
-            border: "1px solid rgba(16,185,129,0.2)",
+            background: "rgba(124,58,237,0.12)",
+            color: "#a78bfa",
+            border: "1px solid rgba(124,58,237,0.25)",
             fontFamily: "var(--font-mono)",
           }}
         >
@@ -299,7 +299,7 @@ export default function AuditorPage() {
                   Demo: try{" "}
                   <code
                     style={{
-                      color: "var(--emerald)",
+                      color: "#a78bfa",
                       fontFamily: "var(--font-mono)",
                       cursor: "pointer",
                     }}
@@ -328,7 +328,7 @@ export default function AuditorPage() {
             )}
 
             <button
-              className="btn btn-emerald"
+              className="btn btn-violet"
               onClick={decrypt}
               disabled={loading || !viewKey}
             >
@@ -342,8 +342,8 @@ export default function AuditorPage() {
           <div
             className="card"
             style={{
-              borderColor: "rgba(16,185,129,0.25)",
-              background: "rgba(16,185,129,0.04)",
+              borderColor: "rgba(124,58,237,0.3)",
+              background: "rgba(124,58,237,0.06)",
             }}
           >
             <div
@@ -356,9 +356,9 @@ export default function AuditorPage() {
             >
               <span
                 className="dot"
-                style={{ background: "var(--emerald)", boxShadow: "0 0 6px var(--emerald-glow)" }}
+                style={{ background: "#a78bfa", boxShadow: "0 0 6px var(--accent-glow)" }}
               />
-              <span className="label" style={{ color: "var(--emerald)" }}>
+              <span className="label" style={{ color: "#a78bfa" }}>
                 Decrypted — Full Detail
               </span>
             </div>
@@ -405,11 +405,11 @@ export default function AuditorPage() {
               style={{
                 marginTop: 14,
                 padding: "8px 12px",
-                background: "rgba(16,185,129,0.06)",
+                background: "rgba(124,58,237,0.06)",
                 borderRadius: 6,
                 fontSize: 12,
                 color: "var(--muted)",
-                border: "1px solid rgba(16,185,129,0.1)",
+                border: "1px solid rgba(124,58,237,0.12)",
               }}
             >
               Only this view key holder can see these values. The public sees only commitments.
