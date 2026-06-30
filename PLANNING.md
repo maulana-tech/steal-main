@@ -44,15 +44,27 @@
 
 ---
 
-## Technical Roadmap
+## Technical Roadmap — Prioritas
 
-### Phase 1 — Stabilisasi (sekarang)
+```
+Sekarang       │  Minggu ini         │  Minggu depan
+───────────────┼─────────────────────┼───────────────────
+Stabilisasi    │  Payment Links      │  Real Verifier
+UX Copy        │  (QR + claim)       │  Yield
+               │                     │  Oracle + Credit
+```
+
+### Phase 1 — Stabilisasi + UX (sekarang)
 - [x] Fix `getPosition` SDK — catch Account not found (DONE)
 - [x] Clean up stale localStorage di auditor + liquidator (DONE)
 - [ ] Bersihkan duplicate contract IDs di `.env`
+- [ ] Ganti istilah teknis: UltraHonk, WASM, HF, LTV, Mock
 - [ ] Update `AGENTS.md` + `CLAUDE.md` seperlunya
 
-### Phase 2 — Real ZK Verification (critical path)
+### Phase 2 — Payment Links (cepat, high demo impact)
+Detail di bawah — diprioritaskan karena 80% reuse infra + impact demo tinggi.
+
+### Phase 3 — Real ZK Verification (critical path)
 Ini blocking karena verifier STUB = tidak ada security.
 - [ ] Bump soroban-sdk 22.0.8 → 26.x di seluruh workspace
   - Butuh: update `contracts/*/Cargo.toml`, sesuaikan API changes
@@ -61,11 +73,6 @@ Ini blocking karena verifier STUB = tidak ada security.
 - [ ] Replace `verify()` STUB body dengan real `ultrahonk::verify()`
 - [ ] Rebuild WASM, redeploy ke testnet
 - [ ] Update `gen-vk.mjs` — pastikan VK format cocok dengan on-chain verifier
-
-### Phase 3 — UX Refresh
-- [ ] Replace technical terms di UI (daftar di atas)
-- [ ] Tambah explanation tooltip ZK di onboarding flow
-- [ ] Testing: user bisa flow lengkap tanpa bantuan dev
 
 ### Phase 4 — Interest / Yield
 
@@ -220,6 +227,100 @@ web/app/lender/                        (new page)
   - page.tsx: deposit USDC, view balance, withdraw
   - Halaman publik — tidak ada ZK di sisi lender
 ```
+
+### Payment Links — Detail
+
+#### Arsitektur
+
+```
+Alice (sender):
+  1. Lock USDC di PaymentPool contract
+  2. commitment = hash(secret, amount, salt) → simpan di contract
+  3. Generate link + QR: eclipse.finance/pay/{commitment}#{secret}
+
+Bob (receiver):
+  1. Buka link / scan QR
+  2. Secret dari URL fragment — ga pernah ke server
+  3. Generate ZK proof: "saya tahu secret yang hash-nya cocok dengan commitment"
+  4. Submit proof → contract verify → transfer USDC ke wallet Bob
+
+On-chain: cuma "commitment 0x7f3a... claimed"
+  - Amount, sender, receiver tidak visible
+  - Nullifier mencegah double-claim
+```
+
+#### Kenapa 80% infra udah ada
+
+| Komponen | Reuse dari Eclipse |
+|---|---|
+| Poseidon commitment | `circuits/common/src/lib.nr` — fungsi `commit()` |
+| Nullifier | `circuits/common/src/lib.nr` — fungsi `nullifier()` |
+| Client-side proof | `@eclipse/proof-gen` — `ProofGenerator` class |
+| On-chain verifier | `contracts/verifier` — tinggal tambah circuit baru |
+| SDK + Stellar invoke | `@eclipse/sdk` — `invokeContract()` |
+
+#### Yang perlu dibuat
+
+| File | Isi |
+|---|---|
+| `circuits/claim_payment/src/main.nr` | Circuit: verify commitment + nullifier, ~10 baris |
+| `circuits/claim_payment/Nargo.toml` | Package config |
+| `contracts/payment-pool/src/lib.rs` | Lock + claim functions |
+| `contracts/payment-pool/Cargo.toml` | Package config |
+| `contracts/Cargo.toml` | Tambah member |
+| `packages/sdk/src/index.ts` | Tambah `createPayment()`, `claimPayment()` |
+| `web/app/pay/create/page.tsx` | Form: amount → generate link + QR |
+| `web/app/pay/claim/[commitment]/page.tsx` | Claim page: scan QR / paste link → claim |
+| `scripts/gen-vk.mjs` | Tambah `claim_payment` ke array NAMES |
+
+#### UX Flow
+
+**Create link:**
+```
+[Pay]                                    [QR: eclipse.finance/pay/...]
+Amount: [50] USDC
+[Generate Link]
+─────────────────────────────────────────
+Your payment link:
+eclipse.finance/pay/0x7f3a...#secret
+
+[Copy Link]  [Download QR]
+```
+
+**Claim link:**
+```
+You received a payment!
+Amount hidden — only you can claim this.
+
+[Connect Wallet]
+[Claim →]
+```
+
+**QR:**
+- Generate pakai `qrcode.react` atau `@paulmillr/qr` (ringan, 0 dep)
+- Download sebagai PNG untuk dikirim via chat
+- Di halaman claim: tampilkan QR reader (atau fallback paste link)
+
+#### Estimasi effort
+
+| Item | Waktu |
+|---|---|
+| Circuit `claim_payment` | 1 jam |
+| Contract `payment-pool` | 2-3 jam |
+| SDK functions | 1 jam |
+| Halaman create + claim + QR | 3-4 jam |
+| Update build scripts + deploy | 1 jam |
+| **Total** | **~1 hari** |
+
+#### Kenapa ini prioritas (sebelum yield)
+
+1. **80% reuse** — infra ZK, verifier, proof-gen, SDK sudah jalan
+2. **Impact demo tinggi** — 30 detik "buat link → kirim → claim" langsung paham
+3. **3 bias juri** — real money ✓, compliant privacy ✓, ZK on-chain ✓
+4. **QR = mobile friendly** — demo di HP juri, bukan cuma laptop
+5. **Lebih pendek dari yield** — yield butuh modify circuit + contract + halaman baru. Payment link contract baru tapi circuit paling simple.
+
+---
 
 ### Phase 5 — Real Oracle + CreditIssuer
 - [ ] Oracle: integrasi Stellar DEX price atau Pyth network
