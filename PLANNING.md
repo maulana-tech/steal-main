@@ -47,11 +47,11 @@
 ## Technical Roadmap — Prioritas
 
 ```
-Sekarang       │  Minggu ini         │  Minggu depan
-───────────────┼─────────────────────┼───────────────────
-Stabilisasi    │  Payment Links      │  Real Verifier
-UX Copy        │  (QR + claim)       │  Yield
-               │                     │  Oracle + Credit
+Minggu ini              │  Minggu depan           │  Post-Hackathon
+────────────────────────┼─────────────────────────┼────────────────────
+Stabilisasi + UX Copy   │  Real ZK Verification   │  Yield
+Payment Links (QR)      │  Oracle + CreditIssuer  │  Multi-asset
+                        │                         │  Wallet Connect
 ```
 
 ### Phase 1 — Stabilisasi + UX (sekarang)
@@ -61,20 +61,33 @@ UX Copy        │  (QR + claim)       │  Yield
 - [ ] Ganti istilah teknis: UltraHonk, WASM, HF, LTV, Mock
 - [ ] Update `AGENTS.md` + `CLAUDE.md` seperlunya
 
-### Phase 2 — Payment Links (cepat, high demo impact)
-Detail di bawah — diprioritaskan karena 80% reuse infra + impact demo tinggi.
+### Phase 2 — Payment Links (fitur baru, minggu ini)
+Detail di bawah — 80% reuse infra, impact demo tinggi.
 
 ### Phase 3 — Real ZK Verification (critical path)
-Ini blocking karena verifier STUB = tidak ada security.
+Minggu depan — verifier STUB = tidak ada security.
 - [ ] Bump soroban-sdk 22.0.8 → 26.x di seluruh workspace
   - Butuh: update `contracts/*/Cargo.toml`, sesuaikan API changes
-  - Risiko: `BytesN<32>` mungkin jadi `BytesN<32>` (sama) atau berubah
+  - Risiko: `BytesN<32>` mungkin berubah API
 - [ ] Add `ultrahonk-soroban-verifier` sebagai dependency ke `contracts/verifier`
 - [ ] Replace `verify()` STUB body dengan real `ultrahonk::verify()`
 - [ ] Rebuild WASM, redeploy ke testnet
 - [ ] Update `gen-vk.mjs` — pastikan VK format cocok dengan on-chain verifier
 
-### Phase 4 — Interest / Yield
+### Phase 4 — Oracle + CreditIssuer (minggu depan)
+- [ ] Oracle: integrasi Stellar DEX price atau Pyth network
+- [ ] CreditIssuer: ganti mock dengan ECDSA signature verification di circuit
+
+---
+
+## On Hold — Post-Hackathon
+
+Fitur di bawah ini penting secara produk tapi **ditunda sampai setelah hackathon** karena:
+- Verifier masih STUB → ZK interest belum real security
+- Yield butuh 3-5 hari kerja dengan return demo mendekati nol
+- Token transfer publik bikin setengah privacy bocor
+
+### Interest / Yield (ditunda)
 
 #### Architecture
 
@@ -312,24 +325,20 @@ Amount hidden — only you can claim this.
 | Update build scripts + deploy | 1 jam |
 | **Total** | **~1 hari** |
 
-#### Kenapa ini prioritas (sebelum yield)
+#### Kenapa ini prioritas
 
 1. **80% reuse** — infra ZK, verifier, proof-gen, SDK sudah jalan
 2. **Impact demo tinggi** — 30 detik "buat link → kirim → claim" langsung paham
 3. **3 bias juri** — real money ✓, compliant privacy ✓, ZK on-chain ✓
 4. **QR = mobile friendly** — demo di HP juri, bukan cuma laptop
-5. **Lebih pendek dari yield** — yield butuh modify circuit + contract + halaman baru. Payment link contract baru tapi circuit paling simple.
+5. **Effort kecil** — ~1 hari, circuit paling simple dari semua circuit yang ada
 
 ---
 
-### Phase 5 — Real Oracle + CreditIssuer
-- [ ] Oracle: integrasi Stellar DEX price atau Pyth network
-- [ ] CreditIssuer: ganti mock dengan ECDSA signature verification di circuit
-
-### Phase 6 — Polish
-- [ ] Multi-asset collateral
-- [ ] Wallet Connect (ganti stub demo)
-- [ ] View key storage non-local (IPFS/encrypted blob)
+### Polish (ditunda)
+- Multi-asset collateral
+- Wallet Connect (ganti stub demo)
+- View key storage non-local (IPFS/encrypted blob)
 
 ---
 
