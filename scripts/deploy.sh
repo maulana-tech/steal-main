@@ -33,6 +33,7 @@ VERIFIER_ID=$(deploy_contract "UltraHonkVerifier" "$WASM_DIR/eclipse_verifier.wa
 ORACLE_ID=$(deploy_contract "Oracle" "$WASM_DIR/eclipse_oracle.wasm")
 CREDIT_ISSUER_ID=$(deploy_contract "CreditIssuer" "$WASM_DIR/eclipse_credit_issuer.wasm")
 LENDING_POOL_ID=$(deploy_contract "LendingPool" "$WASM_DIR/eclipse_lending_pool.wasm")
+PAYMENT_POOL_ID=$(deploy_contract "PaymentPool" "$WASM_DIR/eclipse_payment_pool.wasm")
 
 echo ""
 echo "=== Deployment complete! ==="
@@ -40,17 +41,23 @@ echo "Verifier:     $VERIFIER_ID"
 echo "Oracle:       $ORACLE_ID"
 echo "CreditIssuer: $CREDIT_ISSUER_ID"
 echo "LendingPool:  $LENDING_POOL_ID"
+echo "PaymentPool:  $PAYMENT_POOL_ID"
 
-# Write to .env
+# Write to .env (idempotent: strip any previous contract-ID lines first so
+# re-deploys overwrite instead of accumulating duplicate keys)
+if [ -f "$ENV_FILE" ]; then
+  grep -vE '^(LENDING_POOL_ID|VERIFIER_ID|ORACLE_ID|CREDIT_ISSUER_ID|PAYMENT_POOL_ID)=' "$ENV_FILE" > "$ENV_FILE.tmp" || true
+  mv "$ENV_FILE.tmp" "$ENV_FILE"
+fi
 {
-  echo ""
   echo "LENDING_POOL_ID=$LENDING_POOL_ID"
   echo "VERIFIER_ID=$VERIFIER_ID"
   echo "ORACLE_ID=$ORACLE_ID"
   echo "CREDIT_ISSUER_ID=$CREDIT_ISSUER_ID"
+  echo "PAYMENT_POOL_ID=$PAYMENT_POOL_ID"
 } >> "$ENV_FILE"
 echo ""
-echo "Contract IDs appended to .env"
+echo "Contract IDs written to .env"
 
 # Also write NEXT_PUBLIC_ vars to .env.local for Next.js
 ENV_LOCAL="$(cd "$(dirname "$0")/../web" && pwd)/.env.local"
@@ -61,6 +68,7 @@ NEXT_PUBLIC_LENDING_POOL_ID=$LENDING_POOL_ID
 NEXT_PUBLIC_VERIFIER_ID=$VERIFIER_ID
 NEXT_PUBLIC_ORACLE_ID=$ORACLE_ID
 NEXT_PUBLIC_CREDIT_ISSUER_ID=$CREDIT_ISSUER_ID
+NEXT_PUBLIC_PAYMENT_POOL_ID=$PAYMENT_POOL_ID
 NEXT_PUBLIC_USDC_TOKEN=${USDC_TOKEN:-}
 EOF
 echo "Next.js env written to web/.env.local"

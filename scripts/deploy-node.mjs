@@ -5,7 +5,7 @@
  */
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // testnet only — never in prod
 
-import { readFileSync, appendFileSync, writeFileSync } from "fs";
+import { readFileSync, existsSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
@@ -106,6 +106,7 @@ try {
   ids.ORACLE_ID        = await deploy("Oracle",         "eclipse_oracle.wasm");
   ids.CREDIT_ISSUER_ID = await deploy("CreditIssuer",  "eclipse_credit_issuer.wasm");
   ids.LENDING_POOL_ID  = await deploy("LendingPool",   "eclipse_lending_pool.wasm");
+  ids.PAYMENT_POOL_ID  = await deploy("PaymentPool",   "eclipse_payment_pool.wasm");
 } catch (e) {
   console.error("\nFailed:", e.message);
   process.exit(1);
@@ -114,11 +115,17 @@ try {
 console.log("\n=== Done ===");
 for (const [k, v] of Object.entries(ids)) console.log(`${k}=${v}`);
 
-// Write env files
-appendFileSync(
-  join(ROOT, ".env"),
-  "\n" + Object.entries(ids).map(([k, v]) => `${k}=${v}`).join("\n") + "\n"
-);
+// Write env files (idempotent: strip any previous contract-ID lines first so
+// re-deploys overwrite instead of accumulating duplicate keys)
+const envPath = join(ROOT, ".env");
+const idKeys = Object.keys(ids);
+const kept = (existsSync(envPath) ? readFileSync(envPath, "utf8") : "")
+  .split("\n")
+  .filter((line) => !idKeys.some((k) => line.startsWith(`${k}=`)))
+  .join("\n")
+  .replace(/\n+$/, "");
+const idBlock = Object.entries(ids).map(([k, v]) => `${k}=${v}`).join("\n");
+writeFileSync(envPath, (kept ? kept + "\n" : "") + idBlock + "\n");
 writeFileSync(join(ROOT, "web", ".env.local"),
 `NEXT_PUBLIC_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
@@ -126,6 +133,7 @@ NEXT_PUBLIC_LENDING_POOL_ID=${ids.LENDING_POOL_ID}
 NEXT_PUBLIC_VERIFIER_ID=${ids.VERIFIER_ID}
 NEXT_PUBLIC_ORACLE_ID=${ids.ORACLE_ID}
 NEXT_PUBLIC_CREDIT_ISSUER_ID=${ids.CREDIT_ISSUER_ID}
+NEXT_PUBLIC_PAYMENT_POOL_ID=${ids.PAYMENT_POOL_ID}
 NEXT_PUBLIC_USDC_TOKEN=
 `);
 console.log("Config written → .env + web/.env.local");
