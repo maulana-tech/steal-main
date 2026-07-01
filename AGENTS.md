@@ -32,7 +32,7 @@ Circuits compile → `web/public/circuits/*.json`. Contracts deploy → IDs → 
 
 - **Noir/bb pinned to 0.36.0.** `scripts/gen-vk.mjs` and deploy Node scripts import via hardcoded `.pnpm/...@0.36.0/...` paths. Bumping `@noir-lang/*` or `@stellar/stellar-sdk` breaks these scripts unless paths are updated too.
 - `pnpm build:circuits` = bash compile + node VK gen. VK gen uses `UltraHonkBackend` from JS, **not** `bb write_vk` (libunwind crash on macOS).
-- `build-circuits.sh` compiles 4 circuits; `gen-vk.mjs` generates VKs for only 3 (omits `solvency`).
+- `build-circuits.sh` compiles 5 circuits; `gen-vk.mjs` generates VKs for 4 (omits `solvency`).
 
 ## Cross-language invariant
 

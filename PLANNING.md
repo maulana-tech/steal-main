@@ -57,22 +57,32 @@ Payment Links (QR)      │  Oracle + CreditIssuer  │  Multi-asset
 ### Phase 1 — Stabilisasi + UX (sekarang)
 - [x] Fix `getPosition` SDK — catch Account not found (DONE)
 - [x] Clean up stale localStorage di auditor + liquidator (DONE)
-- [ ] Bersihkan duplicate contract IDs di `.env`
-- [ ] Ganti istilah teknis: UltraHonk, WASM, HF, LTV, Mock
-- [ ] Update `AGENTS.md` + `CLAUDE.md` seperlunya
+- [x] Bersihkan duplicate contract IDs di `.env` — root cause di-fix: `deploy.sh` + `deploy-node.mjs` sekarang idempotent (strip 4 `*_ID` lama lalu tulis ulang, bukan blind append). Tidak ada `.env` di tree untuk dibersihkan; `web/.env.local` sudah bersih.
+- [x] Ganti istilah teknis: UltraHonk/"ZK Proving Engine"→"Privacy Engine", "LOADING WASM"→"INITIALIZING…", "WASM Loading"→"Initializing…", subtitle proof drop "WASM", "HF x"→"Health Factor x", "Prove HF < 1"→"Liquidate This Position", "LTV tier"→"Borrow Limit" (+ helper "higher score → higher borrow limit"), "Mock/MOCK"→"Demo/DEMO", "Oracle Price"→"XLM/USD Price Feed". Nama label resmi "Health Factor" dipertahankan; field circuit (`oracle_price_usd`, `*_commitment`) & marker "STUB" tidak diubah.
+- [x] Update `AGENTS.md` + `CLAUDE.md` seperlunya — CLAUDE.md §deploy diupdate ke perilaku idempotent. Mention "UltraHonk"/"WASM" di docs dibiarkan (deskripsi teknis yang akurat, bukan UI copy).
 
 ### Phase 2 — Payment Links (fitur baru, minggu ini)
 Detail di bawah — 80% reuse infra, impact demo tinggi.
 
+**Status: code-complete (semua layer ditulis & di-verifikasi sebisanya di env ini).**
+- [x] Circuit `circuits/claim_payment` (+ Nargo workspace, `build-circuits.sh`, `gen-vk.mjs`).
+- [x] Contract `contracts/payment-pool` (`lock`/`claim`/`is_claimed`) + `CircuitId::ClaimPayment=3` + error `PaymentNotFound/PaymentAlreadyClaimed`. `cargo check --workspace` hijau.
+- [x] SDK `createPayment`/`claimPayment`/`isPaymentClaimed` + config `paymentPool`.
+- [x] Deploy wiring: `deploy.sh` + `deploy-node.mjs` deploy payment-pool & tulis `NEXT_PUBLIC_PAYMENT_POOL_ID`; `init-contracts.mjs` init block.
+- [x] Frontend `/pay/create` (link + QR via `@paulmillr/qr`) + `/pay/claim/[commitment]` + `web/lib/payments.ts`. Nav "Send Payment". Web `tsc --noEmit` 0 error; logic round-trip 10/10.
+- [ ] **Butuh mesin dengan toolchain**: `pnpm build:circuits` (nargo/bb) untuk artifact+VK, lalu `pnpm deploy` (stellar CLI) + set `NEXT_PUBLIC_USDC_TOKEN`. Sampai itu, flow jalan client-side (demo). On-chain lock/claim aktif otomatis begitu `paymentPool` + `usdcToken` terisi.
+
 ### Phase 3 — Real ZK Verification (critical path)
 Minggu depan — verifier STUB = tidak ada security.
-- [ ] Bump soroban-sdk 22.0.8 → 26.x di seluruh workspace
-  - Butuh: update `contracts/*/Cargo.toml`, sesuaikan API changes
-  - Risiko: `BytesN<32>` mungkin berubah API
-- [ ] Add `ultrahonk-soroban-verifier` sebagai dependency ke `contracts/verifier`
-- [ ] Replace `verify()` STUB body dengan real `ultrahonk::verify()`
-- [ ] Rebuild WASM, redeploy ke testnet
-- [ ] Update `gen-vk.mjs` — pastikan VK format cocok dengan on-chain verifier
+
+**Riset selesai → guide lengkap: [`docs/PHASE3_REAL_VERIFICATION.md`](docs/PHASE3_REAL_VERIFICATION.md).**
+Temuan kunci: verifier real (`ultrahonk_rust_verifier`, Arkworks BN254) butuh **bb v0.87.0**, sedangkan kita pinned **Noir/bb 0.36.0** → jadi cascading bump (soroban-sdk git-rev + Noir/bb 0.36→0.87 + rewrite 5 circuit + VK/proof pipeline). Semua langkah kritis (nargo/bb/stellar) hanya bisa dijalankan di mesin bertoolchain, jadi eksekusi di-hand off; guide siap-apply & branch-friendly (tidak menyentuh build yang jalan).
+
+- [ ] Bump soroban-sdk 22.0.8 → git rev `acffbbd4…` di seluruh workspace (guide §1)
+- [ ] Add `ultrahonk_rust_verifier` (git) ke `contracts/verifier` + rewrite `verify()` (guide §2)
+- [ ] Bump Noir/bb 0.36 → 0.87 (Nargo 1.0.0-beta.9), recompile 5 circuit, re-enable commitment asserts (guide §3)
+- [ ] `gen-vk.mjs`/`build-circuits.sh`: VK JSON via `bb write_vk` (guide §4); `proof-gen`+`crypto` real Poseidon + proof 456-field (guide §5)
+- [ ] Rebuild WASM, redeploy, `set_vk` per circuit, verification checklist (guide §6–§7)
 
 ### Phase 4 — Oracle + CreditIssuer (minggu depan)
 - [ ] Oracle: integrasi Stellar DEX price atau Pyth network
