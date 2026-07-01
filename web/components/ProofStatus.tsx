@@ -9,7 +9,7 @@ const CONFIG: Record<
   generating: {
     icon: "⚙",
     label: "Generating ZK proof in browser…",
-    sub: "WASM is running. This takes 10–30s. Private inputs never leave your device.",
+    sub: "Running in your browser (~10–30s). Private inputs never leave your device.",
     bg: "rgba(124,58,237,0.06)",
     color: "#a78bfa",
     border: "rgba(124,58,237,0.2)",
