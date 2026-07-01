@@ -1,4 +1,4 @@
-use std::hash::poseidon2::Poseidon2;
+pub use poseidon::poseidon2::Poseidon2;
 
 // -- Commitment --
 // commit(value, salt) = Poseidon2([value, salt])

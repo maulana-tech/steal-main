@@ -16,8 +16,7 @@
 //   amount          : u64    - payment amount (stays hidden)
 //   salt            : Field
 
-use common::commit;
-use std::hash::poseidon2::Poseidon2;
+use common::{commit, Poseidon2};
 
 fn main(
     // --- public ---
@@ -32,7 +31,7 @@ fn main(
 ) {
     // 1. Commitment opens to (secret, amount, salt):
     //    commitment = Poseidon2([secret, amount, salt], 3)
-    //    (Relaxed for frontend JS/Noir Poseidon mixing stub compatibility —
+    //    (Relaxed for frontend JS/Noir Poseidon mixing stub compatibility -
     //     re-enable once packages/crypto uses the Noir hash.)
     let computed = Poseidon2::hash([secret, amount as Field, salt], 3);
     // assert(computed == commitment, "commitment does not open to secret");

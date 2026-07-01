@@ -13,7 +13,7 @@ use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, token, vec, Address, BytesN, Env,
     IntoVal, Symbol, Val,
 };
-use eclipse_shared::{EclipseError, ProofBytes};
+use eclipse_shared::{EclipseError, ProofBytes, LEDGER_THRESHOLD, LEDGER_EXTEND};
 
 /// A locked confidential payment. Only `commitment` is meant to be public;
 /// `amount` is stored so the pool can release the exact funds on claim, but it
@@ -44,13 +44,14 @@ pub struct PaymentPoolContract;
 
 #[contractimpl]
 impl PaymentPoolContract {
-    pub fn init(env: Env, admin: Address, verifier: Address, usdc_token: Address) {
-        if env.storage().persistent().has(&PayKey::Admin) {
+    pub fn initialize(env: Env, admin: Address, verifier: Address, usdc_token: Address) {
+        if env.storage().instance().has(&PayKey::Admin) {
             panic!("already initialized");
         }
-        env.storage().persistent().set(&PayKey::Admin, &admin);
-        env.storage().persistent().set(&PayKey::Verifier, &verifier);
-        env.storage().persistent().set(&PayKey::UsdcToken, &usdc_token);
+        env.storage().instance().set(&PayKey::Admin, &admin);
+        env.storage().instance().set(&PayKey::Verifier, &verifier);
+        env.storage().instance().set(&PayKey::UsdcToken, &usdc_token);
+        env.storage().instance().extend_ttl(LEDGER_THRESHOLD, LEDGER_EXTEND);
     }
 
     /// Lock USDC behind a payment commitment. The sender funds the pool; the
@@ -69,8 +70,7 @@ impl PaymentPoolContract {
             panic!("payment already exists");
         }
 
-        // Pull USDC from the sender into the pool.
-        let usdc: Address = env.storage().persistent().get(&PayKey::UsdcToken).unwrap();
+        let usdc: Address = env.storage().instance().get(&PayKey::UsdcToken).unwrap();
         token::Client::new(&env, &usdc).transfer(
             &sender,
             &env.current_contract_address(),
@@ -133,8 +133,7 @@ impl PaymentPoolContract {
             .persistent()
             .set(&PayKey::Nullifier(nullifier_hash), &true);
 
-        // Release the locked USDC to the recipient.
-        let usdc: Address = env.storage().persistent().get(&PayKey::UsdcToken).unwrap();
+        let usdc: Address = env.storage().instance().get(&PayKey::UsdcToken).unwrap();
         token::Client::new(&env, &usdc).transfer(
             &env.current_contract_address(),
             &recipient,
@@ -166,7 +165,7 @@ impl PaymentPoolContract {
     // -- Internal --
 
     fn verify_proof(env: &Env, circuit_id: u32, proof: ProofBytes) -> bool {
-        let verifier: Address = env.storage().persistent().get(&PayKey::Verifier).unwrap();
+        let verifier: Address = env.storage().instance().get(&PayKey::Verifier).unwrap();
         let args: soroban_sdk::Vec<Val> =
             vec![env, circuit_id.into_val(env), proof.into_val(env)];
         env.invoke_contract(&verifier, &Symbol::new(env, "verify"), args)

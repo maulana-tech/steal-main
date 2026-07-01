@@ -11,8 +11,8 @@
  */
 
 import { Noir } from "@noir-lang/noir_js";
-import { UltraHonkBackend } from "@noir-lang/backend_barretenberg";
-import type { CompiledCircuit } from "@noir-lang/types";
+import { UltraHonkBackend } from "@aztec/bb.js";
+import type { CompiledCircuit } from "@noir-lang/noir_js";
 
 export interface OpenPositionInputs {
   // Public
@@ -70,6 +70,13 @@ export interface RepayWithdrawInputs {
   salt_d_new: string;
 }
 
+export interface ClaimPaymentInputs {
+  commitment: string;
+  borrower: string;
+  secret_key: string;
+  position_id: string;
+}
+
 export interface GeneratedProof {
   proof: Uint8Array;
   publicInputs: string[];
@@ -85,19 +92,26 @@ export class ProofGenerator {
   private repayWithdrawNoir: Noir;
   private repayWithdrawBackend: UltraHonkBackend;
 
+  private claimPaymentNoir: Noir;
+  private claimPaymentBackend: UltraHonkBackend;
+
   private constructor(
     openPositionCircuit: CompiledCircuit,
     liquidateCircuit: CompiledCircuit,
     repayWithdrawCircuit: CompiledCircuit,
+    claimPaymentCircuit: CompiledCircuit,
   ) {
-    this.openPositionBackend = new UltraHonkBackend(openPositionCircuit);
+    this.openPositionBackend = new UltraHonkBackend(openPositionCircuit.bytecode as unknown as string);
     this.openPositionNoir = new Noir(openPositionCircuit);
 
-    this.liquidateBackend = new UltraHonkBackend(liquidateCircuit);
+    this.liquidateBackend = new UltraHonkBackend(liquidateCircuit.bytecode as unknown as string);
     this.liquidateNoir = new Noir(liquidateCircuit);
 
-    this.repayWithdrawBackend = new UltraHonkBackend(repayWithdrawCircuit);
+    this.repayWithdrawBackend = new UltraHonkBackend(repayWithdrawCircuit.bytecode as unknown as string);
     this.repayWithdrawNoir = new Noir(repayWithdrawCircuit);
+
+    this.claimPaymentBackend = new UltraHonkBackend(claimPaymentCircuit.bytecode as unknown as string);
+    this.claimPaymentNoir = new Noir(claimPaymentCircuit);
   }
 
   /**
@@ -107,12 +121,13 @@ export class ProofGenerator {
    * Circuits are pre-compiled via `pnpm build:circuits` and placed in web/public/.
    */
   static async create(): Promise<ProofGenerator> {
-    const [openPos, liquidate, repayWithdraw] = await Promise.all([
+    const [openPos, liquidate, repayWithdraw, claimPayment] = await Promise.all([
       fetch("/circuits/open_position.json").then((r) => r.json() as Promise<CompiledCircuit>),
       fetch("/circuits/liquidate.json").then((r) => r.json() as Promise<CompiledCircuit>),
       fetch("/circuits/repay_withdraw.json").then((r) => r.json() as Promise<CompiledCircuit>),
+      fetch("/circuits/claim_payment.json").then((r) => r.json() as Promise<CompiledCircuit>),
     ]);
-    return new ProofGenerator(openPos, liquidate, repayWithdraw);
+    return new ProofGenerator(openPos, liquidate, repayWithdraw, claimPayment);
   }
 
   async proveOpenPosition(inputs: OpenPositionInputs): Promise<GeneratedProof> {
@@ -130,6 +145,12 @@ export class ProofGenerator {
   async proveRepayWithdraw(inputs: RepayWithdrawInputs): Promise<GeneratedProof> {
     const { witness } = await this.repayWithdrawNoir.execute(inputs as any);
     const { proof, publicInputs } = await this.repayWithdrawBackend.generateProof(witness);
+    return { proof, publicInputs };
+  }
+
+  async proveClaimPayment(inputs: ClaimPaymentInputs): Promise<GeneratedProof> {
+    const { witness } = await this.claimPaymentNoir.execute(inputs as any);
+    const { proof, publicInputs } = await this.claimPaymentBackend.generateProof(witness);
     return { proof, publicInputs };
   }
 

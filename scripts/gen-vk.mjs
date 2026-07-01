@@ -1,33 +1,24 @@
 #!/usr/bin/env node
 /**
- * gen-vk.mjs — run from monorepo root:
- *   node scripts/gen-vk.mjs
+ * gen-vk.mjs — Read bb write_vk binary output and print hex for deployment.
+ * Usage: node scripts/gen-vk.mjs [circuit_name]
+ *
+ * The VK binary is produced by `bb write_vk` (called from build-circuits.sh).
+ * This script reads the .vk.bin file and prints hex suitable for set_vk().
  */
-
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT      = join(__dirname, "..");
-const PKG_DIR   = join(ROOT, "node_modules", ".pnpm",
-                    "@noir-lang+backend_barretenberg@0.36.0",
-                    "node_modules", "@noir-lang", "backend_barretenberg");
 const CIRCUITS  = join(ROOT, "web", "public", "circuits");
 
-const { UltraHonkBackend } = await import(join(PKG_DIR, "lib", "esm", "index.js"));
+const name = process.argv[2];
+const names = name ? [name] : ["open_position", "liquidate", "repay_withdraw", "claim_payment"];
 
-const NAMES = ["open_position", "liquidate", "repay_withdraw", "claim_payment"];
-
-for (const name of NAMES) {
-  console.log(`\n==> ${name}`);
-  const artifact = JSON.parse(readFileSync(join(CIRCUITS, `${name}.json`), "utf8"));
-  const backend  = new UltraHonkBackend(artifact);
-  const vk       = await backend.getVerificationKey();
-  const out      = join(CIRCUITS, `${name}.vk.json`);
-  writeFileSync(out, JSON.stringify(Array.from(vk)));
-  console.log(`    saved ${vk.length} bytes -> ${out}`);
-  await backend.destroy();
+for (const n of names) {
+  const path = join(CIRCUITS, `${n}.vk.bin`);
+  const buf  = readFileSync(path);
+  console.log(`\n${n} (${buf.length} bytes):\n0x${buf.toString("hex")}`);
 }
-
-console.log("\ndone.");

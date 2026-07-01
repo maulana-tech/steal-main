@@ -3,7 +3,7 @@ use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short,
     vec, Address, BytesN, Env, IntoVal, Symbol, Val, token,
 };
-use eclipse_shared::{EclipseError, Position, ProofBytes};
+use eclipse_shared::{EclipseError, Position, ProofBytes, LEDGER_THRESHOLD, LEDGER_EXTEND};
 
 #[contracttype]
 pub enum PoolKey {
@@ -22,7 +22,7 @@ pub struct LendingPoolContract;
 
 #[contractimpl]
 impl LendingPoolContract {
-    pub fn init(
+    pub fn initialize(
         env: Env,
         admin: Address,
         verifier: Address,
@@ -31,15 +31,16 @@ impl LendingPoolContract {
         usdc_token: Address,
         liq_threshold_bps: u64,
     ) {
-        if env.storage().persistent().has(&PoolKey::Admin) {
+        if env.storage().instance().has(&PoolKey::Admin) {
             panic!("already initialized");
         }
-        env.storage().persistent().set(&PoolKey::Admin, &admin);
-        env.storage().persistent().set(&PoolKey::Verifier, &verifier);
-        env.storage().persistent().set(&PoolKey::Oracle, &oracle);
-        env.storage().persistent().set(&PoolKey::CreditIssuer, &credit_issuer);
-        env.storage().persistent().set(&PoolKey::UsdcToken, &usdc_token);
-        env.storage().persistent().set(&PoolKey::LiqThresholdBps, &liq_threshold_bps);
+        env.storage().instance().set(&PoolKey::Admin, &admin);
+        env.storage().instance().set(&PoolKey::Verifier, &verifier);
+        env.storage().instance().set(&PoolKey::Oracle, &oracle);
+        env.storage().instance().set(&PoolKey::CreditIssuer, &credit_issuer);
+        env.storage().instance().set(&PoolKey::UsdcToken, &usdc_token);
+        env.storage().instance().set(&PoolKey::LiqThresholdBps, &liq_threshold_bps);
+        env.storage().instance().extend_ttl(LEDGER_THRESHOLD, LEDGER_EXTEND);
     }
 
     /// Open a confidential lending position.
@@ -76,7 +77,7 @@ impl LendingPoolContract {
         );
 
         // Push USDC to borrower
-        let usdc: Address = env.storage().persistent().get(&PoolKey::UsdcToken).unwrap();
+        let usdc: Address = env.storage().instance().get(&PoolKey::UsdcToken).unwrap();
         token::Client::new(&env, &usdc).transfer(
             &env.current_contract_address(),
             &borrower,
@@ -172,7 +173,7 @@ impl LendingPoolContract {
 
         // Accept USDC repayment
         if delta_debt > 0 {
-            let usdc: Address = env.storage().persistent().get(&PoolKey::UsdcToken).unwrap();
+            let usdc: Address = env.storage().instance().get(&PoolKey::UsdcToken).unwrap();
             token::Client::new(&env, &usdc).transfer(
                 &borrower,
                 &env.current_contract_address(),
@@ -210,13 +211,13 @@ impl LendingPoolContract {
     }
 
     pub fn get_liq_threshold(env: Env) -> u64 {
-        env.storage().persistent().get(&PoolKey::LiqThresholdBps).unwrap_or(100)
+        env.storage().instance().get(&PoolKey::LiqThresholdBps).unwrap_or(100)
     }
 
     // -- Internal --
 
     fn verify_proof(env: &Env, circuit_id: u32, proof: ProofBytes) -> bool {
-        let verifier: Address = env.storage().persistent().get(&PoolKey::Verifier).unwrap();
+        let verifier: Address = env.storage().instance().get(&PoolKey::Verifier).unwrap();
         let args: soroban_sdk::Vec<Val> = vec![
             env,
             circuit_id.into_val(env),

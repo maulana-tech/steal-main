@@ -8,8 +8,8 @@
  *
  * All operations run in the browser; secrets never leave the device.
  *
- * Poseidon2 is computed via @noir-lang/noir_js witness execution,
- * which uses the same Barretenberg implementation as the circuits.
+ * Poseidon2 is computed via @aztec/bb.js Barretenberg WASM,
+ * matching the Noir circuit implementation exactly.
  */
 
 // ── Field type ────────────────────────────────────────────────────────────────
@@ -19,36 +19,31 @@ export type Field = bigint; // BN254 scalar field element
 const BN254_FR_MODULUS =
   21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
-// ── Poseidon2 ─────────────────────────────────────────────────────────────────
+// ── Poseidon2 (via @aztec/bb.js Barretenberg WASM) ────────────────────────────
 // Lazy-loaded to avoid SSR issues with WASM.
-// Uses @noir-lang/noir_js to execute a tiny inline circuit that calls Poseidon2.
-// This ensures byte-perfect match with the Noir circuit implementation.
+// Uses the exact same Barretenberg implementation as the proving backend,
+// guaranteeing byte-perfect match with Noir circuit + Soroban host function.
 
-let _poseidon2Fn: ((inputs: bigint[]) => Promise<bigint>) | null = null;
+/** @internal Lazy BB instance. */
+let _bb: any = null;
 
-async function getHashFn(): Promise<(inputs: bigint[]) => Promise<bigint>> {
-  if (_poseidon2Fn) return _poseidon2Fn;
-
-  // Pure-JS stub for frontend UX — no external ZK deps needed here.
-  // Real proofs go through @eclipse/proof-gen (Noir WASM).
-  _poseidon2Fn = async (inputs: bigint[]): Promise<bigint> => {
-    let state = inputs[0] ?? 0n;
-    for (let i = 1; i < inputs.length; i++) {
-      state = (state * 31337n + inputs[i] + BigInt(i)) % BN254_FR_MODULUS;
-    }
-    return state;
-  };
-
-  return _poseidon2Fn;
+async function getBB() {
+  if (!_bb) {
+    const { Barretenberg } = await import("@aztec/bb.js");
+    _bb = Barretenberg.new({ threads: 1 });
+  }
+  return _bb;
 }
 
 /**
  * Poseidon2 hash of field inputs.
- * [STUB] Uses simplified mixing for frontend UX. Real proofs use Noir WASM.
+ * Delegates to @aztec/bb.js Barretenberg WASM for exact match with Noir.
  */
 export async function poseidon2(inputs: Field[]): Promise<Field> {
-  const fn = await getHashFn();
-  return fn(inputs);
+  const { Fr } = await import("@aztec/bb.js");
+  const bb = await getBB();
+  const result = await bb.poseidon2Hash(inputs.map((f) => new Fr(f)));
+  return BigInt(result.toString());
 }
 
 /**

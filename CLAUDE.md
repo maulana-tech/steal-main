@@ -34,7 +34,7 @@ pnpm build            # next build
 
 Single-component work:
 - Circuits: `cd circuits/<name> && nargo compile` (or `nargo test`, `nargo execute`).
-- Contracts: `cd contracts && cargo build --target wasm32-unknown-unknown --release` / `cargo test`.
+- Contracts: `cd contracts && cargo build --target wasm32v1-none --release` / `cargo test`.
 - Frontend lint: `cd web && pnpm lint`.
 
 ## Critical version + path coupling (read before editing build scripts)

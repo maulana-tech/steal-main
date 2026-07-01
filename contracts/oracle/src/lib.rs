@@ -1,4 +1,5 @@
 #![no_std]
+use eclipse_shared::{LEDGER_THRESHOLD, LEDGER_EXTEND};
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, Symbol};
 
 #[contracttype]
@@ -12,26 +13,22 @@ pub struct OracleContract;
 
 #[contractimpl]
 impl OracleContract {
-    pub fn init(env: Env, admin: Address) {
-        if env.storage().persistent().has(&OracleKey::Admin) {
+    pub fn initialize(env: Env, admin: Address) {
+        if env.storage().instance().has(&OracleKey::Admin) {
             panic!("already initialized");
         }
-        env.storage().persistent().set(&OracleKey::Admin, &admin);
+        env.storage().instance().set(&OracleKey::Admin, &admin);
+        env.storage().instance().extend_ttl(LEDGER_THRESHOLD, LEDGER_EXTEND);
     }
 
-    /// Set price for an asset (USD scaled 1e6, e.g. $0.10 = 100_000).
-    /// [STUB] Manual feed — replace with real oracle integration.
     pub fn set_price(env: Env, asset: Symbol, price: u64) {
-        let admin: Address = env.storage().persistent().get(&OracleKey::Admin).unwrap();
+        let admin: Address = env.storage().instance().get(&OracleKey::Admin).unwrap();
         admin.require_auth();
         env.storage().persistent().set(&OracleKey::Price(asset.clone()), &price);
         env.events().publish((symbol_short!("price"), asset), price);
     }
 
     pub fn get_price(env: Env, asset: Symbol) -> u64 {
-        env.storage()
-            .persistent()
-            .get(&OracleKey::Price(asset))
-            .unwrap_or(0)
+        env.storage().persistent().get(&OracleKey::Price(asset)).unwrap_or(0)
     }
 }

@@ -9,9 +9,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@noir-lang/noir_js": "0.36.0",
-    "@noir-lang/backend_barretenberg": "0.36.0",
-    "@noir-lang/types": "0.36.0",
+    "@noir-lang/noir_js": "1.0.0-beta.22",
+    "@aztec/bb.js": "0.87.0",
     "@eclipse/crypto": "workspace:*"
   },
   "devDependencies": {

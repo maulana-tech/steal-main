@@ -12,7 +12,7 @@ import { createRequire } from "module";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT  = join(__dir, "..");
-const WASM  = join(ROOT, "contracts", "target", "wasm32-unknown-unknown", "release");
+const WASM  = join(ROOT, "contracts", "target", "wasm32v1-none", "release");
 
 // Use require() so we get ONE module instance with no ESM caching issues
 const require = createRequire(import.meta.url);

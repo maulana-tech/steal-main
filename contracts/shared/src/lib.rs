@@ -1,6 +1,10 @@
 #![no_std]
 use soroban_sdk::{contracttype, Bytes, BytesN};
 
+/// Extend instance TTL to ~28.9 days (5s per ledger) when it falls below ~500s.
+pub const LEDGER_THRESHOLD: u32 = 100;
+pub const LEDGER_EXTEND: u32 = 500_000;
+
 /// On-chain position — only commitments, no sensitive values.
 #[contracttype]
 #[derive(Clone)]

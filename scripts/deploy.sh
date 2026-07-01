@@ -8,7 +8,7 @@ source "$(dirname "$0")/../.env" 2>/dev/null || true
 
 NETWORK="${STELLAR_NETWORK:-testnet}"
 DEPLOYER="${DEPLOYER_IDENTITY:-deployer}"
-WASM_DIR="$(cd "$(dirname "$0")/../contracts/target/wasm32-unknown-unknown/release" && pwd)"
+WASM_DIR="$(cd "$(dirname "$0")/../contracts/target/wasm32v1-none/release" && pwd)"
 SDK_CONFIG="$(cd "$(dirname "$0")/../packages/sdk/src" && pwd)/config.ts"
 ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
 
@@ -16,7 +16,7 @@ deploy_contract() {
   local NAME=$1
   local WASM=$2
   echo ""
-  echo "► Deploying $NAME…"
+  echo "[Deploying $NAME]"
   local ID
   ID=$(stellar contract deploy \
     --wasm "$WASM" \

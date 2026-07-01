@@ -11,4 +11,4 @@ cd "$CONTRACTS_DIR"
 stellar contract build
 
 echo ""
-echo "=== Contracts built. WASM files in contracts/target/wasm32-unknown-unknown/release/ ==="
+echo "=== Contracts built. WASM files in contracts/target/wasm32v1-none/release/ ==="

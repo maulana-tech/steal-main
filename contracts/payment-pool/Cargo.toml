@@ -7,8 +7,8 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-soroban-sdk = { version = "22.0.8", features = ["alloc"] }
+soroban-sdk = { workspace = true }
 eclipse-shared = { path = "../shared" }
 
 [dev-dependencies]
-soroban-sdk = { version = "22.0.8", features = ["testutils"] }
+soroban-sdk = { version = "26.0.1", features = ["testutils", "alloc"] }

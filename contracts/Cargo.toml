@@ -9,6 +9,9 @@ members = [
 ]
 resolver = "2"
 
+[workspace.dependencies]
+soroban-sdk = { version = "26.0.1", default-features = false, features = ["alloc"] }
+
 [profile.release]
 opt-level = "z"
 overflow-checks = true
