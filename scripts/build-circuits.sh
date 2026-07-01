@@ -23,11 +23,11 @@ for CIRCUIT in "${CIRCUITS[@]}"; do
   cp "target/${CIRCUIT}.json" "$OUT_DIR/${CIRCUIT}.json"
   echo "  Artifact → web/public/circuits/${CIRCUIT}.json"
 
-  echo "  Generating UltraHonk VK via bb write_vk..."
-  bb write_vk --scheme ultra_honk -b "target/${CIRCUIT}.json" -o "$OUT_DIR/${CIRCUIT}.vk"
-  # bb creates a directory with a 'vk' file inside; strip trailing 4 bytes and rename
-  dd if="$OUT_DIR/${CIRCUIT}.vk/vk" of="$OUT_DIR/${CIRCUIT}.vk.bin" bs=1 count=1760 2>/dev/null
-  rm -rf "$OUT_DIR/${CIRCUIT}.vk"
+  echo "  Generating UltraHonk VK via bb write_vk (Keccak)..."
+  bb write_vk --scheme ultra_honk --oracle_hash keccak -b "target/${CIRCUIT}.json" -o "$OUT_DIR/${CIRCUIT}.vk"
+  # bb creates a directory with a 'vk' file inside; Keccak VK is 1760 bytes, no strip needed
+  mv "$OUT_DIR/${CIRCUIT}.vk/vk" "$OUT_DIR/${CIRCUIT}.vk.bin"
+  rmdir "$OUT_DIR/${CIRCUIT}.vk"
   echo "  VK → web/public/circuits/${CIRCUIT}.vk.bin ($(wc -c < "$OUT_DIR/${CIRCUIT}.vk.bin") bytes)"
 done
 

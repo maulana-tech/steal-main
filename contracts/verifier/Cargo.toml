@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 soroban-sdk = { workspace = true }
 eclipse-shared = { path = "../shared" }
-ultrahonk_soroban_verifier = { git = "https://github.com/yugocabrio/ultrahonk-rust-verifier.git", default-features = false }
+ultrahonk_soroban_verifier = { path = "../../crates/ultrahonk-soroban-verifier" }
 
 [dev-dependencies]
 soroban-sdk = { version = "26.0.1", features = ["testutils", "alloc"] }

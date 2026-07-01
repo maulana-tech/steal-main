@@ -31,8 +31,13 @@ Circuits compile → `web/public/circuits/*.json`. Contracts deploy → IDs → 
 ## Version coupling (load-bearing)
 
 - **Noir/bb pinned to 0.36.0.** `scripts/gen-vk.mjs` and deploy Node scripts import via hardcoded `.pnpm/...@0.36.0/...` paths. Bumping `@noir-lang/*` or `@stellar/stellar-sdk` breaks these scripts unless paths are updated too.
-- `pnpm build:circuits` = bash compile + node VK gen. VK gen uses `UltraHonkBackend` from JS, **not** `bb write_vk` (libunwind crash on macOS).
-- `build-circuits.sh` compiles 5 circuits; `gen-vk.mjs` generates VKs for 4 (omits `solvency`).
+- `pnpm build:circuits` = `scripts/build-circuits.sh` compiles + generates VKs via `bb write_vk --oracle_hash keccak`.
+- Keccak VKs are 1760 bytes (no strip needed). Poseidon VKs are 1764 bytes and NOT compatible with the Soroban verifier.
+- `gen-vk.mjs` generates VKs for 4 (omits `solvency`).
+
+## Critical: `oracle_hash = keccak`
+
+The Rust Soroban verifier uses Keccak-256 as the Fiat-Shamir transcript hash. ALL proof/VK generation must use `--oracle_hash keccak` (bb CLI) or `{ keccak: true }` (bb.js `UltraHonkBackend`). **Poseidon2 is the default** and produces proofs that fail on-chain verification (sumcheck mismatch).
 
 ## Cross-language invariant
 
