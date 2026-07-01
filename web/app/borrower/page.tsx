@@ -538,7 +538,7 @@ export default function BorrowerPage() {
                 marginBottom: 16,
               }}
             >
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>ZK Proving Engine (UltraHonk)</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>Privacy Engine</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span
                   className="dot"
@@ -550,7 +550,7 @@ export default function BorrowerPage() {
                   }}
                 />
                 <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: proofGenerator ? "var(--green)" : "var(--amber)" }}>
-                  {proofGenerator ? "READY" : "LOADING WASM..."}
+                  {proofGenerator ? "READY" : "INITIALIZING…"}
                 </span>
               </div>
             </div>
@@ -622,13 +622,13 @@ export default function BorrowerPage() {
                       label="Credit Score"
                       value={score}
                       onChange={setScore}
-                      hint={`LTV tier: ${ltv}% → max borrow $${maxDebt.toFixed(2)}`}
+                      hint={`Higher score → higher borrow limit · ${ltv}% → max $${maxDebt.toFixed(2)}`}
                     />
                     <Field
                       label="Borrow Amount (USDC)"
                       value={debt}
                       onChange={setDebt}
-                      hint={debtOverLimit ? "⚠ Exceeds LTV limit" : "Within LTV limit"}
+                      hint={debtOverLimit ? "⚠ Exceeds borrow limit" : "Within borrow limit"}
                       error={debtOverLimit}
                     />
                   </div>
@@ -646,7 +646,7 @@ export default function BorrowerPage() {
                 >
                   {[
                     { label: "Collateral USD", value: `$${collateralUsd.toFixed(2)}` },
-                    { label: "LTV", value: `${ltv}%` },
+                    { label: "Borrow Limit", value: `${ltv}%` },
                     { label: "Max Borrow", value: `$${maxDebt.toFixed(2)}` },
                   ].map(({ label, value }) => (
                     <div
@@ -744,7 +744,7 @@ export default function BorrowerPage() {
                   }
                 >
                   {!proofGenerator
-                    ? "WASM Loading..."
+                    ? "Initializing…"
                     : proofState === "generating"
                     ? "Generating Proof…"
                     : proofState === "submitting"
@@ -759,7 +759,7 @@ export default function BorrowerPage() {
                     textAlign: "center",
                   }}
                 >
-                  Proof generated in browser via WASM · Private inputs never leave your device
+                  Proof generated in your browser · Private inputs never leave your device
                 </p>
               </div>
             ) : (

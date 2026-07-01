@@ -12,7 +12,7 @@ export default function OraclePriceSlider({ value, onChange }: Props) {
     <div className="card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div>
-          <span className="label">Oracle Price — XLM/USD</span>
+          <span className="label">XLM/USD Price Feed</span>
           <span
             style={{
               marginLeft: 8,

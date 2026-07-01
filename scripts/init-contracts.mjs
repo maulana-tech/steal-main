@@ -121,6 +121,34 @@ async function main() {
     console.log("  LendingPool initialization skipped or failed:", e.message);
   }
 
+  // 4. Initialize PaymentPool (confidential payment links).
+  //    Fill PAYMENT_POOL_ID after `pnpm deploy` writes it to .env, or export it:
+  //    PAYMENT_POOL_ID=C... node scripts/init-contracts.mjs
+  const PAYMENT_POOL_ID = process.env.PAYMENT_POOL_ID ?? "";
+  if (PAYMENT_POOL_ID) {
+    try {
+      console.log("\n► Initializing PaymentPool...");
+      const account = await server.getAccount(deployerAddrStr);
+      const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: PASSPHRASE })
+        .addOperation(
+          new Contract(PAYMENT_POOL_ID).call(
+            "init",
+            new Address(deployerAddrStr).toScVal(),
+            new Address(VERIFIER_ID).toScVal(),
+            new Address(NATIVE_TOKEN_ID).toScVal()
+          )
+        )
+        .setTimeout(300)
+        .build();
+      const res = await sendAndWait(await simulate(tx));
+      console.log("  PaymentPool initialized! Tx:", res.hash);
+    } catch (e) {
+      console.log("  PaymentPool initialization skipped or failed:", e.message);
+    }
+  } else {
+    console.log("\n► PaymentPool init skipped (set PAYMENT_POOL_ID to enable).");
+  }
+
   console.log("\n=== Initialization completed! ===");
 }
 

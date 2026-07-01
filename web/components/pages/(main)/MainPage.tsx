@@ -1,27 +1,36 @@
+import { SmoothScroll } from "@/components/ui/SmoothScroll";
 import { VideoBackground } from "@/components/ui/VideoBackground";
 import { Footer } from "./Footer";
 import { Hero } from "./Hero";
 import { Navbar } from "./Navbar";
-import { RolePanel } from "./RolePanel";
-import { RoleTabProvider } from "./tabs";
+import { FeaturesSection } from "./sections/FeaturesSection";
+import { HowItWorksSection } from "./sections/HowItWorksSection";
+import { TechStackSection } from "./sections/TechStackSection";
+import { CtaSection } from "./sections/CtaSection";
 
 export function MainPage() {
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-black">
-      <VideoBackground />
+    <SmoothScroll>
+      {/* No overflow-hidden here: it would break the sticky navbar and page
+          scroll. The video is fixed, so it needs no clipping. The interactive
+          app lives on /app; this page is the marketing landing. */}
+      <div className="relative min-h-screen bg-black">
+        <VideoBackground />
 
-      <RoleTabProvider>
-        <div className="relative z-10 flex min-h-screen flex-1 flex-col">
+        <div className="relative z-10">
           <Navbar />
 
-          <main className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12 sm:py-16">
+          <main>
             <Hero />
-            <RolePanel />
+            <FeaturesSection />
+            <HowItWorksSection />
+            <TechStackSection />
+            <CtaSection />
           </main>
 
           <Footer />
         </div>
-      </RoleTabProvider>
-    </div>
+      </div>
+    </SmoothScroll>
   );
 }

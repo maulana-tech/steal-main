@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Globe, MessageCircle } from "lucide-react";
+import { Menu, X, Globe, MessageCircle, Send } from "lucide-react";
 import { FaucetButton } from "@/components/wallet/FaucetButton";
 
 // Collapses Docs / socials behind a hamburger. Opens on hover or click; the
@@ -29,6 +30,13 @@ export function NavMenu() {
           >
             <div className="flex items-center gap-3 pr-3">
               <FaucetButton />
+              <Link
+                href="/pay/create"
+                className="liquid-glass flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium text-white/90 hover:bg-white/5"
+              >
+                <Send className="h-3.5 w-3.5 text-[#a78bfa]" />
+                Send Payment
+              </Link>
               <a
                 href="#how"
                 className="whitespace-nowrap text-sm font-medium text-white/80 hover:text-white"

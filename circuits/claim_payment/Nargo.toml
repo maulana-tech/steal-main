@@ -1,0 +1,7 @@
+[package]
+name = "claim_payment"
+type = "bin"
+authors = ["Eclipse"]
+
+[dependencies]
+common = { path = "../common" }

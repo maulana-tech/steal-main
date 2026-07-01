@@ -108,7 +108,7 @@ export default function LiquidatorPage() {
           nullifier: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
           collateralCommitment: "0xdeadbeef9f3a2b1c4e5d6f7a8b9c0d1e2f3a4b5c",
           debtCommitment: "0xfeedface1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
-          openedAt: "Ledger #12345 (Mock)",
+          openedAt: "Ledger #12345 (Demo)",
           collateral: 5000,
           saltC: "0x1234",
           debt: 600,
@@ -120,7 +120,7 @@ export default function LiquidatorPage() {
           nullifier: "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
           collateralCommitment: "0xcafebabe2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d",
           debtCommitment: "0xbadf00d03b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e",
-          openedAt: "Ledger #12389 (Mock)",
+          openedAt: "Ledger #12389 (Demo)",
           collateral: 10000,
           saltC: "0xabcd",
           debt: 400,
@@ -248,7 +248,7 @@ export default function LiquidatorPage() {
                 marginBottom: 4,
               }}
             >
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>ZK Proving Engine (UltraHonk)</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>Privacy Engine</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span
                   className="dot"
@@ -260,7 +260,7 @@ export default function LiquidatorPage() {
                   }}
                 />
                 <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: proofGenerator ? "var(--green)" : "var(--amber)" }}>
-                  {proofGenerator ? "READY" : "LOADING WASM..."}
+                  {proofGenerator ? "READY" : "INITIALIZING…"}
                 </span>
               </div>
             </div>
@@ -307,7 +307,7 @@ export default function LiquidatorPage() {
                           {pos.id}
                           {pos.isMock && (
                             <span style={{ fontSize: 9, background: "rgba(255,255,255,0.08)", padding: "1px 4px", borderRadius: 3, color: "var(--muted)" }}>
-                              MOCK
+                              DEMO
                             </span>
                           )}
                         </div>
@@ -324,7 +324,7 @@ export default function LiquidatorPage() {
                             color: liquidatable ? "var(--red)" : "var(--green)",
                           }}
                         >
-                          HF {isFinite(hf) ? hf.toFixed(2) : "∞"}
+                          Health Factor {isFinite(hf) ? hf.toFixed(2) : "∞"}
                         </span>
                         {liquidatable && (
                           <span
@@ -376,15 +376,15 @@ export default function LiquidatorPage() {
                       style={{ fontSize: 13 }}
                     >
                       {!proofGenerator
-                        ? "WASM Loading..."
+                        ? "Initializing…"
                         : selectedId === pos.id && proofState === "generating"
                         ? "Generating Liquidation Proof…"
                         : selectedId === pos.id && proofState === "submitting"
                         ? "Submitting to Stellar..."
                         : pos.isMock
-                        ? "Mock Position (Walkthrough Only)"
+                        ? "Demo Position"
                         : liquidatable
-                        ? "Prove HF < 1 and Liquidate"
+                        ? "Liquidate This Position"
                         : "Position Healthy"}
                     </button>
                   </div>

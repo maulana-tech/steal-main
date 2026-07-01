@@ -17,7 +17,7 @@ const CIRCUITS  = join(ROOT, "web", "public", "circuits");
 
 const { UltraHonkBackend } = await import(join(PKG_DIR, "lib", "esm", "index.js"));
 
-const NAMES = ["open_position", "liquidate", "repay_withdraw"];
+const NAMES = ["open_position", "liquidate", "repay_withdraw", "claim_payment"];
 
 for (const name of NAMES) {
   console.log(`\n==> ${name}`);

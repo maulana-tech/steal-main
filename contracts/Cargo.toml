@@ -5,6 +5,7 @@ members = [
     "oracle",
     "credit-issuer",
     "lending-pool",
+    "payment-pool",
 ]
 resolver = "2"
 

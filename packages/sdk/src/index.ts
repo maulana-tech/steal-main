@@ -251,6 +251,92 @@ export async function repayWithdraw(p: RepayWithdrawParams): Promise<string> {
   return txHash as string;
 }
 
+// ── PaymentPool helpers ─────────────────────────────────────────────────────
+
+export interface CreatePaymentParams {
+  sender: Signer;
+  commitment: Buffer;   // 32 bytes — Poseidon commitment of (secret, amount, salt)
+  amount: bigint;       // USDC amount to lock (stroops / 7-decimals)
+}
+
+/** Lock USDC behind a payment commitment. Returns the tx hash. */
+export async function createPayment(p: CreatePaymentParams): Promise<string> {
+  const txHash = await invokeContract({
+    contractId: NETWORK_CONFIG.contracts.paymentPool,
+    method: "lock",
+    args: [
+      nativeToScVal(getPublicKey(p.sender), { type: "address" }),
+      nativeToScVal(p.commitment, { type: "bytes" }),
+      nativeToScVal(p.amount, { type: "i128" }),
+    ],
+    source: p.sender,
+  });
+
+  return txHash as string;
+}
+
+export interface ClaimPaymentParams {
+  recipient: Signer;
+  commitment: Buffer;        // 32 bytes
+  nullifierHash: Buffer;     // 32 bytes
+  proofBytes: Buffer;
+  publicInputsBytes: Buffer;
+}
+
+/** Claim a locked payment by submitting a claim_payment proof. Returns the tx hash. */
+export async function claimPayment(p: ClaimPaymentParams): Promise<string> {
+  const txHash = await invokeContract({
+    contractId: NETWORK_CONFIG.contracts.paymentPool,
+    method: "claim",
+    args: [
+      nativeToScVal(getPublicKey(p.recipient), { type: "address" }),
+      nativeToScVal(p.commitment, { type: "bytes" }),
+      nativeToScVal(p.nullifierHash, { type: "bytes" }),
+      // ProofBytes struct
+      xdr.ScVal.scvMap([
+        new xdr.ScMapEntry({
+          key: nativeToScVal("proof", { type: "symbol" }),
+          val: nativeToScVal(p.proofBytes, { type: "bytes" }),
+        }),
+        new xdr.ScMapEntry({
+          key: nativeToScVal("public_inputs", { type: "symbol" }),
+          val: nativeToScVal(p.publicInputsBytes, { type: "bytes" }),
+        }),
+      ]),
+    ],
+    source: p.recipient,
+  });
+
+  return txHash as string;
+}
+
+/** Read-only: whether a payment commitment has already been claimed. */
+export async function isPaymentClaimed(commitment: Buffer): Promise<boolean> {
+  const server = getRpcServer();
+  const contract = new Contract(NETWORK_CONFIG.contracts.paymentPool);
+
+  let account;
+  try {
+    account = await server.getAccount(Keypair.random().publicKey());
+  } catch {
+    return false;
+  }
+
+  const result = await server.simulateTransaction(
+    new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_CONFIG.networkPassphrase })
+      .addOperation(contract.call("is_claimed", nativeToScVal(commitment, { type: "bytes" })))
+      .setTimeout(30)
+      .build()
+  );
+
+  if (SorobanRpc.Api.isSimulationError(result)) {
+    return false;
+  }
+
+  const val = (result as SorobanRpc.Api.SimulateTransactionSuccessResponse).result?.retval;
+  return val ? Boolean(scValToNative(val)) : false;
+}
+
 export interface Position {
   collateralCommitment: Buffer;
   debtCommitment: Buffer;
