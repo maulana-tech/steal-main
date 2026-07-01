@@ -32,4 +32,6 @@ pub enum EclipseError {
     PositionNotActive     = 5,
     NullifierAlreadyUsed  = 6,
     InsufficientLiquidity = 7,
+    PaymentNotFound       = 8,
+    PaymentAlreadyClaimed = 9,
 }

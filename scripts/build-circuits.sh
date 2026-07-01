@@ -10,7 +10,7 @@ OUT_DIR="$(cd "$(dirname "$0")/../web/public/circuits" && pwd)"
 
 mkdir -p "$OUT_DIR"
 
-CIRCUITS=("open_position" "liquidate" "repay_withdraw" "solvency")
+CIRCUITS=("open_position" "liquidate" "repay_withdraw" "solvency" "claim_payment")
 
 for CIRCUIT in "${CIRCUITS[@]}"; do
   echo ""

@@ -513,6 +513,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eclipse-payment-pool"
+version = "0.1.0"
+dependencies = [
+ "eclipse-shared",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "eclipse-shared"
 version = "0.1.0"
 dependencies = [

@@ -13,6 +13,7 @@ export const NETWORK_CONFIG = {
     verifier:     process.env.NEXT_PUBLIC_VERIFIER_ID      ?? "",
     oracle:       process.env.NEXT_PUBLIC_ORACLE_ID        ?? "",
     creditIssuer: process.env.NEXT_PUBLIC_CREDIT_ISSUER_ID ?? "",
+    paymentPool:  process.env.NEXT_PUBLIC_PAYMENT_POOL_ID  ?? "",
   },
   // USDC token contract on testnet (Stellar's circle testnet USDC)
   usdcToken: process.env.NEXT_PUBLIC_USDC_TOKEN ?? "",

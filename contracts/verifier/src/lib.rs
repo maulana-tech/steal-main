@@ -8,6 +8,7 @@ pub enum CircuitId {
     OpenPosition  = 0,
     Liquidate     = 1,
     RepayWithdraw = 2,
+    ClaimPayment  = 3,
 }
 
 #[contracttype]
