@@ -150,31 +150,8 @@ export default function BorrowerPage() {
         position_id: "0x" + pid.toString(16).padStart(64, "0"),
       });
 
-      setProofState("submitting");
-      
-      const { openPosition } = await import("@eclipse/sdk");
-      
-      const NATIVE_TOKEN_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
-
-      const contractFormat = proofGenerator.toContractFormat(generatedProof);
-
-      const txResultHash = await openPosition({
-        borrower: {
-          publicKey: walletAddress!,
-          signTransaction: signTransaction!,
-        },
-        collateralAsset: NATIVE_TOKEN_ID,
-        collateralCommitment: Buffer.from(cc.toString(16).padStart(64, "0"), "hex"),
-        debtCommitment: Buffer.from(dc.toString(16).padStart(64, "0"), "hex"),
-        creditAttestation: Buffer.from((0n).toString(16).padStart(64, "0"), "hex"),
-        nullifierHash: Buffer.from(nh.toString(16).padStart(64, "0"), "hex"),
-        collateralAmountPub: BigInt(collateral) * 10000000n, // scale to 7 decimals
-        debtAmountPub: BigInt(debt) * 10000000n, // scale to 7 decimals
-        proofBytes: contractFormat.proof,
-        publicInputsBytes: contractFormat.publicInputs,
-      });
-
-      // Encrypt and store secrets locally
+      // Encrypt and save secrets to localStorage immediately (before tx)
+      // so data persists even if the transaction fails.
       const { generateRandomViewKeyHex, importViewKey, encryptSecrets } = await import("@eclipse/crypto");
       const vkHex = generateRandomViewKeyHex();
       const cryptoKey = await importViewKey(vkHex);
@@ -195,17 +172,43 @@ export default function BorrowerPage() {
         iv: Array.from(iv),
       }));
       localStorage.setItem(`vk_${nullifierHex}`, vkHex);
+      refreshLocalPositions();
 
-      setExportData(JSON.stringify({
+      const exportPayload = JSON.stringify({
         nullifier: nullifierHex,
         viewKey: vkHex,
         ciphertext: Array.from(ciphertext),
         iv: Array.from(iv),
-      }));
+      });
+      setExportData(exportPayload);
       setViewKey(vkHex);
+
+      setProofState("submitting");
+      
+      const { openPosition } = await import("@eclipse/sdk");
+      
+      const NATIVE_TOKEN_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+
+      const contractFormat = proofGenerator.toContractFormat(generatedProof);
+
+      const txResultHash = await openPosition({
+        borrower: {
+          publicKey: walletAddress!,
+          signTransaction: signTransaction!,
+        },
+        collateralAsset: NATIVE_TOKEN_ID,
+        collateralCommitment: Buffer.from(cc.toString(16).padStart(64, "0"), "hex"),
+        debtCommitment: Buffer.from(dc.toString(16).padStart(64, "0"), "hex"),
+        creditAttestation: Buffer.from((0n).toString(16).padStart(64, "0"), "hex"),
+        nullifierHash: Buffer.from(nh.toString(16).padStart(64, "0"), "hex"),
+        collateralAmountPub: BigInt(collateral) * 10000000n,
+        debtAmountPub: BigInt(debt) * 10000000n,
+        proofBytes: contractFormat.proof,
+        publicInputsBytes: contractFormat.publicInputs,
+      });
+
       setTxHash(txResultHash);
       setProofState("success");
-      refreshLocalPositions();
     } catch (e: any) {
       console.error(e);
       setProofError(circuitErrorUserFriendly(e?.message ?? e?.toString() ?? "Unknown error"));
