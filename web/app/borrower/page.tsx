@@ -22,6 +22,7 @@ export default function BorrowerPage() {
   const [score, setScore] = useState("720");
   const [oraclePrice, setOraclePrice] = useState(100_000);
   const [proofState, setProofState] = useState<ProofState>("idle");
+  const [proofError, setProofError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [viewKey, setViewKey] = useState<string | null>(null);
 
@@ -93,10 +94,29 @@ export default function BorrowerPage() {
     }
   }, [selectedNullifierHex]);
 
+  const minCreditThreshold = 300;
+
+  function circuitErrorUserFriendly(raw: string): string {
+    if (raw.includes("credit score below threshold"))
+      return `Credit score is too low. Minimum required: ${minCreditThreshold}. Try a higher score.`;
+    if (raw.includes("debt exceeds LTV limit"))
+      return "Borrow amount exceeds your limit based on collateral and credit score. Reduce debt or increase collateral.";
+    if (raw.includes("health factor below 1"))
+      return "Position would be immediately liquidatable. Add more collateral or reduce debt.";
+    if (raw.includes("exceeds field modulus") || raw.includes("invalid"))
+      return "Internal error: invalid field value. Please try again.";
+    if (raw.includes("Simulation failed") || raw.includes("HostError"))
+      return "Transaction rejected on-chain. Check your XLM balance and contract configuration.";
+    return raw;
+  }
+
+  const creditScoreLow = Number(score) < minCreditThreshold;
+
   async function handleOpen() {
     if (!wallet || !proofGenerator) return;
     try {
       setProofState("generating");
+      setProofError(null);
       const { randomField, commit, nullifier } = await import("@eclipse/crypto");
 
       const saltC = randomField();
@@ -179,8 +199,9 @@ export default function BorrowerPage() {
       setTxHash(txResultHash);
       setProofState("success");
       refreshLocalPositions();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setProofError(circuitErrorUserFriendly(e?.message ?? e?.toString() ?? "Unknown error"));
       setProofState("error");
     }
   }
@@ -664,7 +685,53 @@ export default function BorrowerPage() {
                   ))}
                 </div>
 
-                <ProofStatus state={proofState} />
+                <ProofStatus state={proofState} errorMessage={proofError ?? undefined} />
+
+                {proofState === "error" && proofError && (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--red)",
+                      padding: "8px 12px",
+                      background: "rgba(239,68,68,0.06)",
+                      border: "1px solid rgba(239,68,68,0.2)",
+                      borderRadius: 6,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {proofError}
+                  </div>
+                )}
+
+                {creditScoreLow && proofState === "idle" && (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--yellow)",
+                      padding: "8px 12px",
+                      background: "rgba(234,179,8,0.06)",
+                      border: "1px solid rgba(234,179,8,0.2)",
+                      borderRadius: 6,
+                    }}
+                  >
+                    ⚠ Credit score ({score}) is below the minimum threshold ({minCreditThreshold}). Increase your credit score to continue.
+                  </div>
+                )}
+
+                {debtOverLimit && proofState === "idle" && (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--yellow)",
+                      padding: "8px 12px",
+                      background: "rgba(234,179,8,0.06)",
+                      border: "1px solid rgba(234,179,8,0.2)",
+                      borderRadius: 6,
+                    }}
+                  >
+                    ⚠ Borrow amount exceeds your limit based on collateral and credit score. Reduce the amount or add more collateral.
+                  </div>
+                )}
 
                 {txHash && (
                   <div
@@ -738,6 +805,7 @@ export default function BorrowerPage() {
                   onClick={handleOpen}
                   disabled={
                     debtOverLimit ||
+                    creditScoreLow ||
                     !proofGenerator ||
                     proofState === "generating" ||
                     proofState === "submitting"
@@ -938,22 +1006,7 @@ export default function BorrowerPage() {
                 )}
 
                 {/* Status displays for action */}
-                <ProofStatus state={manageProofState} />
-
-                {manageError && (
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--red)",
-                      padding: "8px 12px",
-                      background: "var(--red-glow)",
-                      borderRadius: 6,
-                      border: "1px solid rgba(239,68,68,0.2)",
-                    }}
-                  >
-                    {manageError}
-                  </div>
-                )}
+                <ProofStatus state={manageProofState} errorMessage={manageError ?? undefined} />
 
                 {manageTxHash && (
                   <div

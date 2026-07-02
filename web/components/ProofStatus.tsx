@@ -32,14 +32,13 @@ const CONFIG: Record<
   error: {
     icon: "✕",
     label: "Failed.",
-    sub: "Proof generation or submission failed. Check the console.",
     bg: "rgba(239,68,68,0.06)",
     color: "#ef4444",
     border: "rgba(239,68,68,0.2)",
   },
 };
 
-export default function ProofStatus({ state }: { state: ProofState }) {
+export default function ProofStatus({ state, errorMessage }: { state: ProofState; errorMessage?: string }) {
   if (state === "idle") return null;
   const c = CONFIG[state];
 
@@ -67,8 +66,10 @@ export default function ProofStatus({ state }: { state: ProofState }) {
       </span>
       <div>
         <div style={{ fontSize: 13, fontWeight: 600, color: c.color }}>{c.label}</div>
-        {c.sub && (
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{c.sub}</div>
+        {(c.sub || errorMessage) && (
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, whiteSpace: "pre-wrap" }}>
+            {errorMessage || c.sub}
+          </div>
         )}
       </div>
     </div>
