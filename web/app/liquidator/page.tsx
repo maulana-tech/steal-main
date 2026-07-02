@@ -151,20 +151,27 @@ export default function LiquidatorPage() {
         cryptoKey
       );
       const { commit } = await import("@eclipse/crypto");
-      const { getPosition } = await import("@eclipse/sdk");
-      const nhBuffer = Buffer.from(data.nullifier, "hex");
-      const chainPos = await getPosition(nhBuffer);
-      if (!chainPos || !chainPos.isActive) {
-        throw new Error("Position is not active on-chain");
-      }
       const cc = await commit(secrets.collateral, secrets.saltC);
       const dc = await commit(secrets.debt, secrets.saltD);
+      let chainInfo = "";
+      try {
+        const { getPosition } = await import("@eclipse/sdk");
+        const nhBuffer = Buffer.from(data.nullifier, "hex");
+        const chainPos = await getPosition(nhBuffer);
+        if (chainPos && chainPos.isActive) {
+          chainInfo = `Ledger #${chainPos.openedAt}`;
+        } else {
+          chainInfo = "Inactive or not found on-chain";
+        }
+      } catch {
+        chainInfo = "Chain lookup unavailable";
+      }
       const newPos = {
         id: `pos_${data.nullifier.slice(0, 6)}`,
         nullifier: "0x" + data.nullifier,
         collateralCommitment: "0x" + cc.toString(16).padStart(64, "0"),
         debtCommitment: "0x" + dc.toString(16).padStart(64, "0"),
-        openedAt: `Ledger #${chainPos.openedAt}`,
+        openedAt: chainInfo,
         collateral: Number(secrets.collateral),
         saltC: "0x" + secrets.saltC.toString(16).padStart(64, "0"),
         debt: Number(secrets.debt),
@@ -173,6 +180,8 @@ export default function LiquidatorPage() {
         imported: true,
       };
       setPositions([newPos]);
+      setImportError(null);
+      setImportJson("");
     } catch (e: any) {
       setImportError(e.message ?? "Failed to import position data");
     }

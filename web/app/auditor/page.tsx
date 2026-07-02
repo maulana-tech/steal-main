@@ -9,17 +9,17 @@ interface Decrypted {
   saltC: string;
   saltD: string;
   healthFactor: number;
+  nullifier: string;
 }
 
 export default function AuditorPage() {
-  const embedded = false; // standalone page
+  const embedded = false;
   const [viewKey, setViewKey] = useState("");
-  const [posId, setPosId] = useState("pos_001");
+  const [posId, setPosId] = useState("");
   const [decrypted, setDecrypted] = useState<Decrypted | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dynamic positions scanner
   const [localPositions, setLocalPositions] = useState<string[]>([]);
   const [selectedPos, setSelectedPos] = useState("");
   const [chainPosition, setChainPosition] = useState<any | null>(null);
@@ -32,21 +32,13 @@ export default function AuditorPage() {
       const posKeys = keys.filter((k) => k.startsWith("secrets_"));
       const nullifiers = posKeys.map((k) => k.replace("secrets_", ""));
       setLocalPositions(nullifiers);
-      if (nullifiers.length > 0) {
-        setSelectedPos(nullifiers[0]);
-        setPosId(nullifiers[0]);
-        const savedVk = localStorage.getItem(`vk_${nullifiers[0]}`);
-        if (savedVk) {
-          setViewKey(savedVk);
-        }
-      }
     }
   }, []);
 
   useEffect(() => {
     let active = true;
     async function loadChainPos() {
-      if (!posId || posId.trim() === "pos_001") {
+      if (!posId || posId.trim() === "") {
         setChainPosition(null);
         return;
       }
@@ -55,30 +47,17 @@ export default function AuditorPage() {
         const clean = posId.trim().replace("0x", "");
         const res = await getPosition(Buffer.from(clean, "hex"));
         if (active) {
-          if (res === null) {
-            // Position not found on-chain — clean up stale localStorage entry
-            localStorage.removeItem(`secrets_${clean}`);
-            localStorage.removeItem(`vk_${clean}`);
-            const keys = Object.keys(localStorage).filter(k => k.startsWith("secrets_"));
-            const nullifiers = keys.map(k => k.replace("secrets_", ""));
-            setLocalPositions(nullifiers);
-          }
           setChainPosition(res);
         }
       } catch (e) {
-        console.warn("Cleaning up stale position:", e);
-        const clean = posId.trim().replace("0x", "");
-        localStorage.removeItem(`secrets_${clean}`);
-        localStorage.removeItem(`vk_${clean}`);
+        console.warn("Chain lookup failed:", e);
         if (active) {
           setChainPosition(null);
         }
       }
     }
     loadChainPos();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [posId]);
 
   const handleSelectChange = (val: string) => {
@@ -99,7 +78,7 @@ export default function AuditorPage() {
     try {
       const data = JSON.parse(importJson.trim());
       if (!data.nullifier || !data.viewKey || !data.ciphertext || !data.iv) {
-        throw new Error("Missing required fields");
+        throw new Error("Missing required fields: nullifier, viewKey, ciphertext, iv");
       }
       localStorage.setItem(`secrets_${data.nullifier}`, JSON.stringify({
         ciphertext: Array.from(data.ciphertext),
@@ -114,6 +93,7 @@ export default function AuditorPage() {
       }
       setViewKey(data.viewKey);
       setImportJson("");
+      setError(null);
     } catch (e: any) {
       setImportError(e.message ?? "Invalid JSON format");
     }
@@ -126,23 +106,20 @@ export default function AuditorPage() {
     try {
       const { importViewKey, decryptSecrets } = await import("@eclipse/crypto");
 
-      // Clean the Position ID (nullifier hash) input
       const cleanPosId = posId.trim().replace("0x", "");
       const item = localStorage.getItem(`secrets_${cleanPosId}`);
       if (!item) {
-        throw new Error("Position not found or secrets not stored locally in this browser.");
+        throw new Error("Position not found. Import position data from the borrower first, using 'Import from Borrower Export' above.");
       }
 
       const { ciphertext, iv } = JSON.parse(item);
       const cryptoKey = await importViewKey(viewKey.trim());
-
       const secrets = await decryptSecrets(
         new Uint8Array(ciphertext),
         new Uint8Array(iv),
         cryptoKey
       );
 
-      // Compute health factor using Oracle XLM price ($0.10)
       const collateralVal = Number(secrets.collateral);
       const debtVal = Number(secrets.debt);
       const hf = debtVal > 0 ? (collateralVal * 0.1) / debtVal : Infinity;
@@ -154,6 +131,7 @@ export default function AuditorPage() {
         saltC: "0x" + secrets.saltC.toString(16).padStart(64, "0").slice(0, 10) + "…",
         saltD: "0x" + secrets.saltD.toString(16).padStart(64, "0").slice(0, 10) + "…",
         healthFactor: hf,
+        nullifier: cleanPosId,
       });
     } catch (e: any) {
       console.error(e);
@@ -163,12 +141,6 @@ export default function AuditorPage() {
   }
 
   const getPubValue = (key: string) => {
-    if (posId === "pos_001") {
-      if (key === "Position ID") return "pos_001";
-      if (key === "Collateral") return "0xdeadbeef9f3a2b1c4e5d6f7a8b9c0d1e2f3a4b5c";
-      if (key === "Debt") return "0xfeedface1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f";
-      if (key === "Credit Attestation") return "0x99aabb3f4e5d6c7b8a9b0c1d2e3f4a5b6c7d8e9f";
-    }
     if (!chainPosition) return "Not found or loading...";
     if (key === "Position ID") return posId;
     if (key === "Collateral") return "0x" + Buffer.from(chainPosition.collateralCommitment).toString("hex");
@@ -228,69 +200,15 @@ export default function AuditorPage() {
           The public on-chain state only shows commitments.
         </p>
 
-        {/* Public state */}
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div className="label">Public On-Chain State</div>
-            {chainPosition && (
-              <span
-                style={{
-                  fontSize: 10,
-                  padding: "2px 6px",
-                  borderRadius: 4,
-                  background: chainPosition.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
-                  color: chainPosition.isActive ? "var(--green)" : "var(--red)",
-                  border: chainPosition.isActive ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.3)",
-                }}
-              >
-                {chainPosition.isActive ? "ACTIVE" : "INACTIVE"}
-              </span>
-            )}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {[
-              { k: "Position ID", v: getPubValue("Position ID") },
-              { k: "Collateral", v: getPubValue("Collateral") },
-              { k: "Debt", v: getPubValue("Debt") },
-              { k: "Credit Attestation", v: getPubValue("Credit Attestation") },
-            ].map(({ k, v }) => (
-              <div
-                key={k}
-                style={{ display: "flex", flexDirection: "column", gap: 4 }}
-              >
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>{k}</span>
-                <span
-                  className="mono"
-                  style={{
-                    fontSize: 12,
-                    color: "#a78bfa",
-                    wordBreak: "break-all",
-                    background: "#080808",
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    border: "1px solid rgba(255,255,255,0.03)",
-                  }}
-                >
-                  {v}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div
-            style={{
-              marginTop: 12,
-              fontSize: 12,
-              color: "var(--accent)",
-              fontStyle: "italic",
-            }}
-          >
-            Actual amounts completely hidden to the public
-          </div>
-        </div>
-
         {/* Import from borrower */}
         <div className="card" style={{ marginBottom: 12 }}>
-          <div className="label" style={{ marginBottom: 8 }}>Import from Borrower Export</div>
+          <div className="label" style={{ marginBottom: 8 }}>
+            Step 1: Import from Borrower Export
+          </div>
+          <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10, lineHeight: 1.4 }}>
+            Ask the borrower to click "Export Position Data" after opening a position,
+            then paste the copied JSON here.
+          </p>
           <textarea
             className="input"
             rows={2}
@@ -303,7 +221,7 @@ export default function AuditorPage() {
             <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 6 }}>{importError}</div>
           )}
           <button
-            className="btn btn-ghost"
+            className="btn btn-violet"
             style={{ fontSize: 12 }}
             onClick={handleImport}
             disabled={!importJson.trim()}
@@ -312,9 +230,74 @@ export default function AuditorPage() {
           </button>
         </div>
 
+        {/* Public state */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="label" style={{ marginBottom: 14 }}>Public On-Chain State</div>
+          {!posId ? (
+            <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", padding: "12px 0" }}>
+              Import a position above, or select a saved one below, to see its on-chain state.
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                {chainPosition && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      background: chainPosition.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                      color: chainPosition.isActive ? "var(--green)" : "var(--red)",
+                      border: chainPosition.isActive ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.3)",
+                    }}
+                  >
+                    {chainPosition.isActive ? "ACTIVE" : "INACTIVE"}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  { k: "Position ID", v: getPubValue("Position ID") },
+                  { k: "Collateral", v: getPubValue("Collateral") },
+                  { k: "Debt", v: getPubValue("Debt") },
+                  { k: "Credit Attestation", v: getPubValue("Credit Attestation") },
+                ].map(({ k, v }) => (
+                  <div key={k} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{k}</span>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: 12,
+                        color: "#a78bfa",
+                        wordBreak: "break-all",
+                        background: "#080808",
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(255,255,255,0.03)",
+                      }}
+                    >
+                      {v}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  fontSize: 12,
+                  color: "var(--accent)",
+                  fontStyle: "italic",
+                }}
+              >
+                Actual amounts completely hidden to the public
+              </div>
+            </>
+          )}
+        </div>
+
         {/* View key input */}
         <div className="card" style={{ marginBottom: 12 }}>
-          <div className="label" style={{ marginBottom: 16 }}>Decrypt with View Key</div>
+          <div className="label" style={{ marginBottom: 16 }}>Step 2: Decrypt with View Key</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {localPositions.length > 0 && (
               <div>
@@ -327,6 +310,7 @@ export default function AuditorPage() {
                   onChange={(e) => handleSelectChange(e.target.value)}
                   style={{ cursor: "pointer", textOverflow: "ellipsis" }}
                 >
+                  <option value="">-- Select a saved position --</option>
                   {localPositions.map((nh) => (
                     <option key={nh} value={nh}>
                       {nh.slice(0, 16)}…{nh.slice(-16)}
@@ -344,6 +328,7 @@ export default function AuditorPage() {
                 className="input"
                 value={posId}
                 onChange={(e) => setPosId(e.target.value)}
+                placeholder="Auto-filled after import"
               />
             </div>
             <div>
@@ -354,24 +339,8 @@ export default function AuditorPage() {
                 className="input"
                 value={viewKey}
                 onChange={(e) => setViewKey(e.target.value)}
-                placeholder="vk_…"
+                placeholder="vk_… (auto-filled after import)"
               />
-              {posId === "pos_001" && (
-                <div style={{ marginTop: 4, fontSize: 11, color: "var(--muted)" }}>
-                  Demo: try{" "}
-                  <code
-                    style={{
-                      color: "#a78bfa",
-                      fontFamily: "var(--font-mono)",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setViewKey("vk_demo123")}
-                  >
-                    vk_demo123
-                  </code>{" "}
-                  for pos_001
-                </div>
-              )}
             </div>
 
             {error && (
@@ -392,7 +361,7 @@ export default function AuditorPage() {
             <button
               className="btn btn-violet"
               onClick={decrypt}
-              disabled={loading || !viewKey}
+              disabled={loading || !viewKey || !posId}
             >
               {loading ? "Decrypting…" : "Decrypt Position"}
             </button>
