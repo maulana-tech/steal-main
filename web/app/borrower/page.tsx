@@ -25,6 +25,7 @@ export default function BorrowerPage() {
   const [proofError, setProofError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [viewKey, setViewKey] = useState<string | null>(null);
+  const [exportData, setExportData] = useState<string | null>(null);
 
   // ── Manage Position State ────────────────────────────────────────────────────
   const [localPositions, setLocalPositions] = useState<string[]>([]);
@@ -195,6 +196,12 @@ export default function BorrowerPage() {
       }));
       localStorage.setItem(`vk_${nullifierHex}`, vkHex);
 
+      setExportData(JSON.stringify({
+        nullifier: nullifierHex,
+        viewKey: vkHex,
+        ciphertext: Array.from(ciphertext),
+        iv: Array.from(iv),
+      }));
       setViewKey(vkHex);
       setTxHash(txResultHash);
       setProofState("success");
@@ -797,6 +804,18 @@ export default function BorrowerPage() {
                       <span style={{ color: "var(--emerald)" }}>{viewKey}</span>
                       <span style={{ fontSize: 11, color: "var(--muted)" }}>Copy</span>
                     </div>
+                    {exportData && (
+                      <button
+                        className="btn btn-ghost"
+                        style={{ fontSize: 12 }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(exportData!);
+                          alert("Position data copied! Share with liquidator or auditor.");
+                        }}
+                      >
+                        📋 Export Position Data (for liquidator/auditor)
+                      </button>
+                    )}
                   </div>
                 )}
 

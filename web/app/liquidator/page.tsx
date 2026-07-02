@@ -17,6 +17,8 @@ export default function LiquidatorPage() {
   
   const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importJson, setImportJson] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
 
   // ── Preloaded Cryptographic Prover ──────────────────────────────────────────
   const [proofGenerator, setProofGenerator] = useState<any | null>(null);
@@ -132,6 +134,48 @@ export default function LiquidatorPage() {
     
     setPositions(newPositions);
     setLoading(false);
+  }
+
+  async function handleImport() {
+    setImportError(null);
+    try {
+      const data = JSON.parse(importJson.trim());
+      if (!data.nullifier || !data.viewKey || !data.ciphertext || !data.iv) {
+        throw new Error("Missing required fields: nullifier, viewKey, ciphertext, iv");
+      }
+      const { importViewKey, decryptSecrets } = await import("@eclipse/crypto");
+      const cryptoKey = await importViewKey(data.viewKey);
+      const secrets = await decryptSecrets(
+        new Uint8Array(data.ciphertext),
+        new Uint8Array(data.iv),
+        cryptoKey
+      );
+      const { commit } = await import("@eclipse/crypto");
+      const { getPosition } = await import("@eclipse/sdk");
+      const nhBuffer = Buffer.from(data.nullifier, "hex");
+      const chainPos = await getPosition(nhBuffer);
+      if (!chainPos || !chainPos.isActive) {
+        throw new Error("Position is not active on-chain");
+      }
+      const cc = await commit(secrets.collateral, secrets.saltC);
+      const dc = await commit(secrets.debt, secrets.saltD);
+      const newPos = {
+        id: `pos_${data.nullifier.slice(0, 6)}`,
+        nullifier: "0x" + data.nullifier,
+        collateralCommitment: "0x" + cc.toString(16).padStart(64, "0"),
+        debtCommitment: "0x" + dc.toString(16).padStart(64, "0"),
+        openedAt: `Ledger #${chainPos.openedAt}`,
+        collateral: Number(secrets.collateral),
+        saltC: "0x" + secrets.saltC.toString(16).padStart(64, "0"),
+        debt: Number(secrets.debt),
+        saltD: "0x" + secrets.saltD.toString(16).padStart(64, "0"),
+        isMock: false,
+        imported: true,
+      };
+      setPositions([newPos]);
+    } catch (e: any) {
+      setImportError(e.message ?? "Failed to import position data");
+    }
   }
 
   async function handleLiquidate(pos: any) {
@@ -266,6 +310,30 @@ export default function LiquidatorPage() {
             </div>
 
             <OraclePriceSlider value={oraclePrice} onChange={setOraclePrice} />
+
+            {/* Import Position Data */}
+            <div className="card" style={{ marginBottom: 8 }}>
+              <div className="label" style={{ marginBottom: 8 }}>Import Position from Borrower</div>
+              <textarea
+                className="input"
+                rows={3}
+                placeholder='Paste exported JSON here: {"nullifier":"...","viewKey":"vk_...","ciphertext":[...],"iv":[...]}'
+                value={importJson}
+                onChange={(e) => setImportJson(e.target.value)}
+                style={{ fontSize: 11, fontFamily: "var(--font-mono)", marginBottom: 8, resize: "vertical" }}
+              />
+              {importError && (
+                <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 8 }}>{importError}</div>
+              )}
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: 12 }}
+                onClick={handleImport}
+                disabled={!importJson.trim()}
+              >
+                Import & Decrypt Position
+              </button>
+            </div>
 
             <div className="label" style={{ marginTop: 8 }}>
               Open Positions — commitments only

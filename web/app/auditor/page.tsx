@@ -23,6 +23,8 @@ export default function AuditorPage() {
   const [localPositions, setLocalPositions] = useState<string[]>([]);
   const [selectedPos, setSelectedPos] = useState("");
   const [chainPosition, setChainPosition] = useState<any | null>(null);
+  const [importJson, setImportJson] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -91,6 +93,31 @@ export default function AuditorPage() {
       }
     }
   };
+
+  async function handleImport() {
+    setImportError(null);
+    try {
+      const data = JSON.parse(importJson.trim());
+      if (!data.nullifier || !data.viewKey || !data.ciphertext || !data.iv) {
+        throw new Error("Missing required fields");
+      }
+      localStorage.setItem(`secrets_${data.nullifier}`, JSON.stringify({
+        ciphertext: Array.from(data.ciphertext),
+        iv: Array.from(data.iv),
+      }));
+      localStorage.setItem(`vk_${data.nullifier}`, data.viewKey);
+      setPosId(data.nullifier);
+      setSelectedPos(data.nullifier);
+      if (typeof window !== "undefined") {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith("secrets_"));
+        setLocalPositions(keys.map(k => k.replace("secrets_", "")));
+      }
+      setViewKey(data.viewKey);
+      setImportJson("");
+    } catch (e: any) {
+      setImportError(e.message ?? "Invalid JSON format");
+    }
+  }
 
   async function decrypt() {
     setLoading(true);
@@ -259,6 +286,30 @@ export default function AuditorPage() {
           >
             Actual amounts completely hidden to the public
           </div>
+        </div>
+
+        {/* Import from borrower */}
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div className="label" style={{ marginBottom: 8 }}>Import from Borrower Export</div>
+          <textarea
+            className="input"
+            rows={2}
+            placeholder='Paste JSON exported from borrower page...'
+            value={importJson}
+            onChange={(e) => setImportJson(e.target.value)}
+            style={{ fontSize: 11, fontFamily: "var(--font-mono)", marginBottom: 8, resize: "vertical" }}
+          />
+          {importError && (
+            <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 6 }}>{importError}</div>
+          )}
+          <button
+            className="btn btn-ghost"
+            style={{ fontSize: 12 }}
+            onClick={handleImport}
+            disabled={!importJson.trim()}
+          >
+            Import Position
+          </button>
         </div>
 
         {/* View key input */}
